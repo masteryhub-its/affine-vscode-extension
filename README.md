@@ -1,8 +1,8 @@
 # AFFiNE by MasteryHub ITS
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![CI](https://github.com/MasteryHub-ITS/affine-vscode-extension/actions/workflows/ci.yml/badge.svg)](https://github.com/MasteryHub-ITS/affine-vscode-extension/actions/workflows/ci.yml)
-[![GitHub stars](https://img.shields.io/github/stars/MasteryHub-ITS/affine-vscode-extension?style=social)](https://github.com/MasteryHub-ITS/affine-vscode-extension/stargazers)
+[![CI](https://github.com/masteryhub-its/affine-vscode-extension/actions/workflows/ci.yml/badge.svg)](https://github.com/masteryhub-its/affine-vscode-extension/actions/workflows/ci.yml)
+[![GitHub stars](https://img.shields.io/github/stars/masteryhub-its/affine-vscode-extension?style=social)](https://github.com/masteryhub-its/affine-vscode-extension/stargazers)
 
 Browse, preview, search, move, and trash pages from **self-hosted AFFiNE** or **AFFiNE Cloud** without leaving VS Code or Cursor.
 
@@ -100,8 +100,8 @@ This client is MIT-licensed and built in the open. Anyone using self-hosted AFFi
 
 **How to participate** — full steps in [CONTRIBUTING.md](./CONTRIBUTING.md):
 
-1. **Bug** — [open a bug report](https://github.com/MasteryHub-ITS/affine-vscode-extension/issues/new?template=bug_report.yml) with extension version, editor, server URL (no tokens), and what happened.
-2. **Feature** — [open a feature request](https://github.com/MasteryHub-ITS/affine-vscode-extension/issues/new?template=feature_request.yml). Describe the problem, then a proposal. Open an issue before large changes so we can agree on shape.
+1. **Bug** — [open a bug report](https://github.com/masteryhub-its/affine-vscode-extension/issues/new?template=bug_report.yml) with extension version, editor, server URL (no tokens), and what happened.
+2. **Feature** — [open a feature request](https://github.com/masteryhub-its/affine-vscode-extension/issues/new?template=feature_request.yml). Describe the problem, then a proposal. Open an issue before large changes so we can agree on shape.
 3. **Pull request** — fork, branch from `main`, write a failing `*.spec.ts` then the code, run `npm run validate`, and open a PR against `main` using the template.
 4. **Security** — do not file public issues. Follow [SECURITY.md](./SECURITY.md).
 
@@ -113,7 +113,7 @@ The same contribution kit is what we will use for the Plane plugin.
 
 ## Install
 
-1. Download the `.vsix` from [Releases](https://github.com/MasteryHub-ITS/affine-vscode-extension/releases), or run `npm run package` in this repo.
+1. Download the `.vsix` from [Releases](https://github.com/masteryhub-its/affine-vscode-extension/releases), or run `npm run package` in this repo.
 2. VS Code / Cursor: **Extensions → … → Install from VSIX…**
 3. **Restart** the editor.
 4. Open the AFFiNE icon in the activity bar, set the server if needed, and sign in.

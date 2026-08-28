@@ -1,13 +1,13 @@
 # Publishing this repo on GitHub
 
-Use this once when moving off GitLab onto **[MasteryHub-ITS](https://github.com/MasteryHub-ITS)**. The Plane plugin can follow the same checklist.
+Use this once when moving off GitLab onto **[masteryhub-its](https://github.com/masteryhub-its)**. The Plane plugin can follow the same checklist.
 
 ## Create the public repo
 
 From this directory, after the first commit:
 
 ```bash
-gh repo create MasteryHub-ITS/affine-vscode-extension \
+gh repo create masteryhub-its/affine-vscode-extension \
   --public \
   --source=. \
   --remote=origin \
@@ -18,7 +18,7 @@ gh repo create MasteryHub-ITS/affine-vscode-extension \
 If `origin` already exists, create the empty repo in the org UI, then:
 
 ```bash
-git remote add origin https://github.com/MasteryHub-ITS/affine-vscode-extension.git
+git remote add origin https://github.com/masteryhub-its/affine-vscode-extension.git
 git push -u origin main
 ```
 
@@ -37,7 +37,7 @@ On `main`: require the **CI** check, require a pull request for everyone except 
 ## After the first push
 
 1. Star the repo from the org or your user account (empty-star projects look abandoned).
-2. Pin it on the [org profile](https://github.com/MasteryHub-ITS) if it should be the public face of the editor plugins.
+2. Pin it on the [org profile](https://github.com/masteryhub-its) if it should be the public face of the editor plugins.
 3. Create a GitHub Release for `0.2.0` and attach `affine-0.2.0.vsix`.
 4. Copy this folder’s `.github/`, `CODE_STANDARDS.md`, and `CONTRIBUTING.md` into `plane-vscode-extension` when that repo starts.
 
@@ -45,4 +45,4 @@ On `main`: require the **CI** check, require a pull request for everyone except 
 
 - Open VSX and VS Marketplace publisher `masteryhub-its`
 - GitHub Discussions for Q&A (keep Issues for bugs/features)
-- Org community files in [MasteryHub-ITS/.github](https://github.com/MasteryHub-ITS/.github) so CoC / security defaults apply to every public repo
+- Org community files in [masteryhub-its/.github](https://github.com/masteryhub-its/.github) so CoC / security defaults apply to every public repo

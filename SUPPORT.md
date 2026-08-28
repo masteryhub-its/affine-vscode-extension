@@ -1,6 +1,6 @@
 # Support
 
-- **Bugs and features:** [GitHub Issues](https://github.com/MasteryHub-ITS/affine-vscode-extension/issues)
+- **Bugs and features:** [GitHub Issues](https://github.com/masteryhub-its/affine-vscode-extension/issues)
 - **How to contribute:** [CONTRIBUTING.md](./CONTRIBUTING.md)
 - **What the extension does:** [FEATURES.md](./FEATURES.md)
 - **Security:** [SECURITY.md](./SECURITY.md)

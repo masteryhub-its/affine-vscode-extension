@@ -10,12 +10,12 @@
   "packageManager": "npm@11.6.2",
   "repository": {
     "type": "git",
-    "url": "https://github.com/MasteryHub-ITS/affine-vscode-extension.git"
+    "url": "https://github.com/masteryhub-its/affine-vscode-extension.git"
   },
   "bugs": {
-    "url": "https://github.com/MasteryHub-ITS/affine-vscode-extension/issues"
+    "url": "https://github.com/masteryhub-its/affine-vscode-extension/issues"
   },
-  "homepage": "https://github.com/MasteryHub-ITS/affine-vscode-extension#readme",
+  "homepage": "https://github.com/masteryhub-its/affine-vscode-extension#readme",
   "engines": {
     "vscode": "^1.90.0",
     "node": ">=20.0.0"

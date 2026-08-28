@@ -164,4 +164,4 @@ These stay out of scope by design (also in [FEATURES.md](./FEATURES.md)):
 - [FEATURES.md](./FEATURES.md) — what v0.5.0 does today  
 - [CODE_STANDARDS.md](./CODE_STANDARDS.md) — engineering bar  
 - [SECURITY.md](./SECURITY.md) — vulnerability reports  
-- Plane sibling: [plane-vscode-extension ROADMAP](https://github.com/MasteryHub-ITS/plane-vscode-extension/blob/main/ROADMAP.md) (separate product plan)
+- Plane sibling: [plane-vscode-extension ROADMAP](https://github.com/masteryhub-its/plane-vscode-extension/blob/main/ROADMAP.md) (separate product plan)
