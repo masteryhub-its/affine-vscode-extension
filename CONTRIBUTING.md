@@ -6,13 +6,13 @@ By participating you agree to the [Code of Conduct](./CODE_OF_CONDUCT.md).
 
 | I want to… | Where to go |
 | --- | --- |
-| Report a bug in this extension | [Open a bug report](https://github.com/MasteryHub-ITS/affine-vscode/issues/new?template=bug_report.yml) |
-| Suggest a feature | [Open a feature request](https://github.com/MasteryHub-ITS/affine-vscode/issues/new?template=feature_request.yml) |
+| Report a bug in this extension | [Open a bug report](https://github.com/MasteryHub-ITS/affine-vscode-extension/issues/new?template=bug_report.yml) |
+| Suggest a feature | [Open a feature request](https://github.com/MasteryHub-ITS/affine-vscode-extension/issues/new?template=feature_request.yml) |
 | Send a code or docs change | [Open a pull request](#submit-a-pull-request) |
 | Report a security problem | [SECURITY.md](./SECURITY.md) — **not** a public issue |
 | Report a bug in AFFiNE itself | [toeverything/AFFiNE](https://github.com/toeverything/AFFiNE/issues) |
 
-Pick a form from [New issue](https://github.com/MasteryHub-ITS/affine-vscode/issues/new/choose). Blank issues are turned off so reports stay complete.
+Pick a form from [New issue](https://github.com/MasteryHub-ITS/affine-vscode-extension/issues/new/choose). Blank issues are turned off so reports stay complete.
 
 ## Submit an issue
 
@@ -20,8 +20,8 @@ Pick a form from [New issue](https://github.com/MasteryHub-ITS/affine-vscode/iss
 
 Use this when something in **this VS Code / Cursor client** is wrong (sidebar, preview, sign-in, move, trash, sync).
 
-1. Search [existing issues](https://github.com/MasteryHub-ITS/affine-vscode/issues) so we do not duplicate work.
-2. Open **[Bug report](https://github.com/MasteryHub-ITS/affine-vscode/issues/new?template=bug_report.yml)**.
+1. Search [existing issues](https://github.com/MasteryHub-ITS/affine-vscode-extension/issues) so we do not duplicate work.
+2. Open **[Bug report](https://github.com/MasteryHub-ITS/affine-vscode-extension/issues/new?template=bug_report.yml)**.
 3. Fill in:
    - Extension version (for example `0.2.0`)
    - Editor (VS Code or Cursor, and the version if you know it)
@@ -35,8 +35,8 @@ A good bug is reproducible. One problem per issue.
 
 Use this when the extension cannot do something you need, or the current flow is awkward.
 
-1. Search [existing issues](https://github.com/MasteryHub-ITS/affine-vscode/issues) first.
-2. Open **[Feature request](https://github.com/MasteryHub-ITS/affine-vscode/issues/new?template=feature_request.yml)**.
+1. Search [existing issues](https://github.com/MasteryHub-ITS/affine-vscode-extension/issues) first.
+2. Open **[Feature request](https://github.com/MasteryHub-ITS/affine-vscode-extension/issues/new?template=feature_request.yml)**.
 3. Describe the **user problem** first, then a proposal. UI sketches are welcome. Implementation detail is optional.
 4. Say where it belongs if you know (sidebar, Pages tree, preview, sync / move / trash, sign-in).
 
@@ -45,18 +45,18 @@ For anything larger than a small fix, wait for a maintainer to agree on shape be
 ### What not to file here
 
 - **AFFiNE server or web app bugs** — file those upstream, not against this client.
-- **Security issues** (token leaks, auth bypass, injection) — follow [SECURITY.md](./SECURITY.md). Email **contact@masteryhub-its.com** or use [private vulnerability reporting](https://github.com/MasteryHub-ITS/affine-vscode/security/advisories/new). Do not paste live tokens.
+- **Security issues** (token leaks, auth bypass, injection) — follow [SECURITY.md](./SECURITY.md). Email **contact@masteryhub-its.com** or use [private vulnerability reporting](https://github.com/MasteryHub-ITS/affine-vscode-extension/security/advisories/new). Do not paste live tokens.
 
 ## Submit a pull request
 
-Docs typos and tiny fixes can go straight to a PR. For behavior changes, [open an issue](https://github.com/MasteryHub-ITS/affine-vscode/issues/new/choose) first so we can agree on the approach.
+Docs typos and tiny fixes can go straight to a PR. For behavior changes, [open an issue](https://github.com/MasteryHub-ITS/affine-vscode-extension/issues/new/choose) first so we can agree on the approach.
 
 ### 1. Fork and branch
 
 ```bash
-git clone https://github.com/<your-account>/affine-vscode.git
-cd affine-vscode
-git remote add upstream https://github.com/MasteryHub-ITS/affine-vscode.git
+git clone https://github.com/<your-account>/affine-vscode-extension.git
+cd affine-vscode-extension
+git remote add upstream https://github.com/MasteryHub-ITS/affine-vscode-extension.git
 git checkout -b feat/short-description
 ```
 
@@ -98,7 +98,7 @@ If the change is user-facing, update [README.md](./README.md) and [FEATURES.md](
 ### 4. Open the PR
 
 1. Push your branch to your fork (or to this repo if you have write access).
-2. Open a pull request against **`main`**: [compare](https://github.com/MasteryHub-ITS/affine-vscode/compare).
+2. Open a pull request against **`main`**: [compare](https://github.com/MasteryHub-ITS/affine-vscode-extension/compare).
 3. Fill in the PR template (summary, test plan, checklist).
 4. Title the PR like a conventional commit: `feat: …`, `fix: …`, `docs: …`.
 5. Keep the PR focused. Separate refactors from behavior changes.
@@ -120,7 +120,7 @@ Once merged, maintainers ship a `.vsix` on GitHub Releases when they cut a versi
 
 ## If you just want to use it
 
-Install the `.vsix` from [Releases](https://github.com/MasteryHub-ITS/affine-vscode/releases) (see [README](./README.md)). Star the repo if it saves you time — that is how other self-hosted teams find it.
+Install the `.vsix` from [Releases](https://github.com/MasteryHub-ITS/affine-vscode-extension/releases) (see [README](./README.md)). Star the repo if it saves you time — that is how other self-hosted teams find it.
 
 ## Releases (maintainers)
 
@@ -128,4 +128,4 @@ Bump `package.json` version, update [CHANGELOG.md](./CHANGELOG.md), run `npm run
 
 ## Plane plugin
 
-When `plane-vscode` exists, copy this file (with repo URLs), [CODE_STANDARDS.md](./CODE_STANDARDS.md), `.github/` templates and workflows, and the same ESLint / Prettier / `tsconfig` strictness. Keep one contribution experience across both plugins.
+When `plane-vscode-extension` exists, copy this file (with repo URLs), [CODE_STANDARDS.md](./CODE_STANDARDS.md), `.github/` templates and workflows, and the same ESLint / Prettier / `tsconfig` strictness. Keep one contribution experience across both plugins.

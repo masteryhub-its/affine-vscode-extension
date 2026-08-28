@@ -7,7 +7,7 @@ Use this once when moving off GitLab onto **[MasteryHub-ITS](https://github.com/
 From this directory, after the first commit:
 
 ```bash
-gh repo create MasteryHub-ITS/affine-vscode \
+gh repo create MasteryHub-ITS/affine-vscode-extension \
   --public \
   --source=. \
   --remote=origin \
@@ -18,7 +18,7 @@ gh repo create MasteryHub-ITS/affine-vscode \
 If `origin` already exists, create the empty repo in the org UI, then:
 
 ```bash
-git remote add origin https://github.com/MasteryHub-ITS/affine-vscode.git
+git remote add origin https://github.com/MasteryHub-ITS/affine-vscode-extension.git
 git push -u origin main
 ```
 
@@ -39,7 +39,7 @@ On `main`: require the **CI** check, require a pull request for everyone except 
 1. Star the repo from the org or your user account (empty-star projects look abandoned).
 2. Pin it on the [org profile](https://github.com/MasteryHub-ITS) if it should be the public face of the editor plugins.
 3. Create a GitHub Release for `0.2.0` and attach `affine-0.2.0.vsix`.
-4. Copy this folder’s `.github/`, `CODE_STANDARDS.md`, and `CONTRIBUTING.md` into `plane-vscode` when that repo starts.
+4. Copy this folder’s `.github/`, `CODE_STANDARDS.md`, and `CONTRIBUTING.md` into `plane-vscode-extension` when that repo starts.
 
 ## Optional later
 

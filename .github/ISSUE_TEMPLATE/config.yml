@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security report
-    url: https://github.com/MasteryHub-ITS/affine-vscode/security/advisories/new
+    url: https://github.com/MasteryHub-ITS/affine-vscode-extension/security/advisories/new
     about: Private disclosure for vulnerabilities. Do not file those as public issues.
   - name: AFFiNE server (upstream)
     url: https://github.com/toeverything/AFFiNE/issues
