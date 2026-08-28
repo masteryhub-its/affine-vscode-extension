@@ -1,0 +1,16 @@
+export enum SidebarMessageType {
+  SIGN_IN_WITH_TOKEN = 'signInWithToken',
+  SIGN_IN_WITH_PASSWORD = 'signInWithPassword',
+  SIGN_OUT = 'signOut',
+  OPEN_DOCUMENT = 'openDocument',
+  OPEN_IN_BROWSER = 'openInBrowser',
+  DELETE_DOCUMENT = 'deleteDocument',
+  MOVE_DOCUMENT = 'moveDocument',
+  REFRESH = 'refresh',
+  FORCE_RELOAD = 'forceReload',
+  SEARCH = 'search',
+  SET_SERVER_URL = 'setServerUrl',
+  CREATE_PAGE = 'createPage',
+  CREATE_FOLDER = 'createFolder',
+  RESTORE_DOCUMENT = 'restoreDocument',
+}

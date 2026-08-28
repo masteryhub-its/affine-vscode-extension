@@ -1,0 +1,15 @@
+export enum PageBlockKind {
+  HEADING = 'heading',
+  PARAGRAPH = 'paragraph',
+  QUOTE = 'quote',
+  LIST = 'list',
+  CODE = 'code',
+  DIVIDER = 'divider',
+  BOOKMARK = 'bookmark',
+  IMAGE = 'image',
+  LATEX = 'latex',
+  LINKED_DOC = 'linkedDoc',
+  TABLE = 'table',
+  CALLOUT = 'callout',
+  ATTACHMENT = 'attachment',
+}

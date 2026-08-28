@@ -1,0 +1,32 @@
+name: Feature request
+description: A change that would help you use AFFiNE from the editor
+title: '[feat] '
+labels: ['enhancement']
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do today that is awkward or impossible?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should the extension do? UI sketches welcome. Implementation detail is optional.
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where it belongs
+      options:
+        - Sidebar
+        - Pages tree
+        - Page preview
+        - Sync / move / trash
+        - Sign-in / settings
+        - Unsure
+    validations:
+      required: true

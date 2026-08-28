@@ -1,0 +1,25 @@
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+default:
+  interruptible: true
+
+stages:
+  - verify
+
+verify:
+  stage: verify
+  image: node:22-bookworm-slim
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+      - .npm/
+  script:
+    - npm ci
+    - npm run validate
+    - npm run compile

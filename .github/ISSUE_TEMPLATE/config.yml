@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report
+    url: https://github.com/MasteryHub-ITS/affine-vscode/security/advisories/new
+    about: Private disclosure for vulnerabilities. Do not file those as public issues.
+  - name: AFFiNE server (upstream)
+    url: https://github.com/toeverything/AFFiNE/issues
+    about: Bugs in AFFiNE itself, not this VS Code / Cursor client.
+  - name: MasteryHub ITS
+    url: https://masteryhub-its.com
+    about: Company site and product questions.

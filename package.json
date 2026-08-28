@@ -1,0 +1,275 @@
+{
+  "name": "affine",
+  "displayName": "AFFiNE by MasteryHub",
+  "description": "MasteryHub ITS client for AFFiNE — browse, preview, and organize self-hosted or Cloud pages inside VS Code and Cursor.",
+  "version": "0.5.0",
+  "publisher": "masteryhub-its",
+  "license": "MIT",
+  "author": "MasteryHub ITS",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MasteryHub-ITS/affine-vscode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MasteryHub-ITS/affine-vscode/issues"
+  },
+  "homepage": "https://github.com/MasteryHub-ITS/affine-vscode#readme",
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=20.0.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "affine",
+    "notes",
+    "wiki",
+    "self-hosted",
+    "masteryhub",
+    "vscode-extension",
+    "cursor"
+  ],
+  "icon": "media/affine.png",
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:affineExplorer",
+    "onView:affinePanel"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "AFFiNE",
+      "properties": {
+        "affine.serverUrl": {
+          "type": "string",
+          "default": "https://affine.masteryhub-its.com",
+          "description": "Base URL of the AFFiNE instance (Global only — workspace/folder settings are ignored so a cloned repo cannot retarget your token). Use https://app.affine.pro for AFFiNE Cloud, or your self-hosted URL (no trailing slash)."
+        },
+        "affine.defaultWorkspaceId": {
+          "type": "string",
+          "default": "",
+          "description": "Optional workspace id used as the default search/open target. Empty uses every accessible workspace."
+        },
+        "affine.openMode": {
+          "type": "string",
+          "enum": [
+            "external"
+          ],
+          "default": "external",
+          "description": "How to open an AFFiNE document. Always uses your system browser. Cursor Simple Browser has no AFFiNE login session, so it shows “you do not have access”."
+        },
+        "affine.clientVersion": {
+          "type": "string",
+          "default": "0.26.0",
+          "description": "Value of the x-affine-client-version request header. Must be >= 0.26.0 so websocket sync (move and trash) is accepted."
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "affine",
+          "title": "AFFiNE",
+          "icon": "media/affine.svg"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "affine.openSignIn",
+        "title": "Sign in to AFFiNE"
+      },
+      {
+        "command": "affine.search",
+        "title": "Search AFFiNE Pages",
+        "icon": "$(search)"
+      },
+      {
+        "command": "affine.openDocument",
+        "title": "Open AFFiNE Document"
+      },
+      {
+        "command": "affine.refresh",
+        "title": "Sync AFFiNE",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "affine.forceReload",
+        "title": "Force Reload AFFiNE",
+        "icon": "$(debug-restart)"
+      },
+      {
+        "command": "affine.signOut",
+        "title": "Sign out of AFFiNE",
+        "icon": "$(sign-out)"
+      },
+      {
+        "command": "affine.deleteDocument",
+        "title": "Move to Trash",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "affine.moveDocument",
+        "title": "Move to Folder",
+        "icon": "$(files)"
+      },
+      {
+        "command": "affine.createPage",
+        "title": "New AFFiNE Page",
+        "icon": "$(add)"
+      },
+      {
+        "command": "affine.createFolder",
+        "title": "New Organize Folder",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "affine.restoreDocument",
+        "title": "Restore from Trash",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "affine.renameDocument",
+        "title": "Rename Page",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "affine.duplicateDocument",
+        "title": "Duplicate Page",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "affine.openLink",
+        "title": "Open AFFiNE Link"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "affine.deleteDocument",
+          "when": "false"
+        },
+        {
+          "command": "affine.moveDocument",
+          "when": "false"
+        },
+        {
+          "command": "affine.renameDocument",
+          "when": "false"
+        },
+        {
+          "command": "affine.duplicateDocument",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "affine.search",
+          "when": "view == affinePanel || view == affineExplorer",
+          "group": "navigation@0"
+        },
+        {
+          "command": "affine.createPage",
+          "when": "view == affinePanel || view == affineExplorer",
+          "group": "navigation@1"
+        },
+        {
+          "command": "affine.forceReload",
+          "when": "view == affinePanel || view == affineExplorer",
+          "group": "navigation@2"
+        },
+        {
+          "command": "affine.refresh",
+          "when": "view == affinePanel || view == affineExplorer",
+          "group": "navigation@3"
+        },
+        {
+          "command": "affine.signOut",
+          "when": "(view == affinePanel || view == affineExplorer) && affine.signedIn",
+          "group": "navigation@4"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "affine.moveDocument",
+          "when": "view == affineExplorer && viewItem == affineDocument",
+          "group": "1_organize@1"
+        },
+        {
+          "command": "affine.renameDocument",
+          "when": "view == affineExplorer && viewItem == affineDocument",
+          "group": "1_organize@2"
+        },
+        {
+          "command": "affine.duplicateDocument",
+          "when": "view == affineExplorer && viewItem == affineDocument",
+          "group": "1_organize@3"
+        },
+        {
+          "command": "affine.deleteDocument",
+          "when": "view == affineExplorer && viewItem == affineDocument",
+          "group": "1_organize@4"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "affine.openLink",
+          "when": "editorHasSelection || editorTextFocus",
+          "group": "navigation@9"
+        }
+      ]
+    },
+    "views": {
+      "affine": [
+        {
+          "type": "webview",
+          "id": "affinePanel",
+          "name": "AFFiNE",
+          "visibility": "visible"
+        },
+        {
+          "id": "affineExplorer",
+          "name": "Pages",
+          "visibility": "visible"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "rm -rf dist && esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
+    "vscode:prepublish": "npm run compile",
+    "lint": "eslint src --max-warnings 0",
+    "lint:fix": "eslint src --fix --max-warnings 0",
+    "format": "prettier --write \"src/**/*.ts\" \"*.json\" \".prettierrc\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"package.json\" \".prettierrc\"",
+    "type-check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.eslint.json --noEmit",
+    "test": "jest --ci",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "validate": "npm run type-check && npm run lint && npm run format:check && npm test",
+    "package": "npm run compile && vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.10.7",
+    "@types/vscode": "^1.90.0",
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "@vscode/vsce": "^3.2.2",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "globals": "^15.14.0",
+    "jest": "^30.0.0",
+    "prettier": "^3.4.2",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.8.3",
+    "yjs": "^13.6.32"
+  }
+}
