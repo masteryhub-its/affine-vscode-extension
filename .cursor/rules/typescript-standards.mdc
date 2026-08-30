@@ -1,0 +1,17 @@
+---
+description: Strict TypeScript for MasteryHub editor plugins
+globs: "**/*.ts"
+alwaysApply: false
+---
+
+# TypeScript
+
+- No `any`. Narrow `unknown`.
+- Explicit return types on functions.
+- `public` / `private` on class members.
+- Named interfaces/types for parameters and returns. Never inline `{ ... }` on a function signature.
+- `import type` for type-only imports.
+- No non-null assertions.
+- Exhaustive switches on unions.
+- Under `exactOptionalPropertyTypes`, omit optional keys instead of passing `undefined` unless the type includes `| undefined`.
+- Prettier print width 200. Prefer one line when it fits.

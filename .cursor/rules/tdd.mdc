@@ -1,0 +1,12 @@
+---
+description: Tests first for new behavior and bug fixes
+alwaysApply: true
+---
+
+# Tests first
+
+- Add or extend a `*.spec.ts` and watch it fail for the missing behavior.
+- Then write the minimum production code to pass.
+- Assert on real results (parsed data, HTML, error codes), not mock call counts.
+- Keep logic out of `src/vscode/` so Jest can run it without the editor.
+- `npm run validate` must stay green (types, lint, format, tests).

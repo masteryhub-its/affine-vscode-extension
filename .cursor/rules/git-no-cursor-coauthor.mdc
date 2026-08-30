@@ -1,0 +1,13 @@
+---
+description: Never add Cursor agent Co-authored-by lines to git commits
+alwaysApply: true
+---
+
+# Git commits — no Cursor co-author trailer
+
+When creating commits (via terminal, scripts, or instructions to the user), **never** append or suggest:
+
+- `Co-authored-by: ... cursoragent@cursor.com`
+- Any `Co-authored-by` line attributing **Cursor** / **Cursor Agent** / **default avatarCursor**
+
+Human authors only; no IDE/agent attribution in commit messages.
