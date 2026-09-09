@@ -10,4 +10,3 @@ This file is for humans and coding agents working in this repo.
 6. Do not install extra formatters or relax `exactOptionalPropertyTypes` / `no-explicit-any`.
 7. Keep VS Code host code in `src/vscode/`. Put parse / encode / HTTP logic in plain modules so Jest can run it.
 8. After packaging a `.vsix`, tell the user to uninstall the old build, install the new one, and **restart** the editor.
-9. Do **not** add `.masteryhub-playbook.yml`. This repo is a public community plugin; MasteryHub catalog pins stay in internal platform repos. House rules stay in this file and [CODE_STANDARDS.md](./CODE_STANDARDS.md).
