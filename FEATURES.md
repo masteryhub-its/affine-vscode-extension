@@ -180,4 +180,3 @@ These are out of scope, not missing by accident:
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — issues and pull requests
 - [CHANGELOG.md](./CHANGELOG.md) — what landed in each version
 - [SECURITY.md](./SECURITY.md) — vulnerability reports
-- `.masteryhub-playbook.yml` — product pin (`masteryhub-its` / `1.0`)
