@@ -10,14 +10,14 @@ describe('renderSidebarHtml', () => {
   it('renders a sign-in form when signed out', () => {
     const state: SidebarState = {
       status: SidebarStatus.SIGNED_OUT,
-      serverUrl: 'https://affine.masteryhub-its.com',
+      serverUrl: 'https://app.affine.pro',
       error: undefined,
       busy: false,
     };
     const html = renderSidebarHtml({ state, nonce, cspSource });
     expect(html).toContain('Sign in');
     expect(html).toContain('id="password-form"');
-    expect(html).toContain('https://affine.masteryhub-its.com');
+    expect(html).toContain('https://app.affine.pro');
     expect(html).toContain('id="server-preset"');
     expect(html).toContain('AFFiNE Cloud');
     expect(html).toContain('id="save-server"');
@@ -94,7 +94,7 @@ describe('renderSidebarHtml', () => {
   it('says force reload rebuilds AFFiNE without reloading the editor window', () => {
     const state: SidebarState = {
       status: SidebarStatus.SIGNED_OUT,
-      serverUrl: 'https://affine.masteryhub-its.com',
+      serverUrl: 'https://app.affine.pro',
       error: undefined,
       busy: false,
     };

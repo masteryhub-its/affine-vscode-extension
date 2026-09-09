@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.0 — 2026-09-09
+
+Public store release: marketplace metadata, screenshots, and a CI catalog smoke budget.
+
+- Default server is AFFiNE Cloud; self-hosted URLs are entered as custom (no private instance URL in the listing)
+- Visual Studio Marketplace and Open VSX publish workflow on GitHub Release (`VSCE_PAT`, `OVSX_PAT`)
+- Marketplace screenshots captured from the real sidebar and preview HTML
+- Catalog smoke: 250 docs mapped under a 2s cold-sync budget in CI
+- README install path for Marketplace / Open VSX, with GitHub `.vsix` as the sideload fallback
+
 ## 0.5.0 — 2026-08-28
 
 Sideload build. Roadmap items labeled v0.3–v0.5 shipped in this version; **0.3.0 and 0.4.0 were not tagged separately**.

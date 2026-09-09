@@ -14,6 +14,14 @@ This is an open-source **[MasteryHub ITS](https://www.masteryhub-its.com)** clie
 
 The sibling [Plane VS Code client](https://github.com/masteryhub-its/plane-vscode-extension) uses the same standards.
 
+## Screenshots
+
+![AFFiNE sidebar with Organize folders next to the editor](media/screenshots/sidebar.png)
+
+![Read-only page preview with tables, callouts, and mentions](media/screenshots/preview.png)
+
+![Sign in with an access token or email and password](media/screenshots/signin.png)
+
 ## Built by MasteryHub ITS
 
 [MasteryHub Information Technology Solutions](https://www.masteryhub-its.com) is a product engineering team based in Egypt. We ship MVPs and internal platforms for startups and growing companies.
@@ -41,7 +49,7 @@ Full catalog (including preview coverage and non-goals): **[FEATURES.md](./FEATU
 
 ### Connect
 
-- AFFiNE Cloud (`https://app.affine.pro`), MasteryHub’s instance, or any custom self-hosted URL
+- AFFiNE Cloud (`https://app.affine.pro`) or any custom self-hosted URL
 - Sign in with an access token, or email and password (password is used once to mint a token and is not stored)
 - Sign out from the sidebar, Pages toolbar, or command palette
 - Status bar shows the signed-in **name** (not email), or a sign-in prompt
@@ -117,12 +125,20 @@ The same contribution kit is used by the [Plane VS Code client](https://github.c
 
 ## Install
 
+**From a store** (after the publisher tokens are set and a GitHub Release has run `publish.yml`):
+
+1. [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=MasteryHubITS.affine) or [Open VSX](https://open-vsx.org/extension/MasteryHubITS/affine)
+2. Search **AFFiNE by MasteryHub** in the editor Extensions view (`MasteryHubITS.affine`)
+3. Open the AFFiNE icon in the activity bar, set the server if needed, and sign in
+
+**From a GitHub `.vsix`** (sideload, or until the store listing is live):
+
 1. Download the `.vsix` from [Releases](https://github.com/masteryhub-its/affine-vscode-extension/releases), or run `npm run package` in this repo.
 2. VS Code / Cursor: **Extensions → … → Install from VSIX…**
 3. **Restart** the editor (Force reload does not load new extension JavaScript).
 4. Open the AFFiNE icon in the activity bar, set the server if needed, and sign in.
 
-Uninstall any older sideload before installing a new `.vsix`. Marketplace and Open VSX listing are still on the [roadmap](./ROADMAP.md).
+Uninstall any older sideload before installing a new `.vsix`.
 
 ## Compatibility
 
@@ -130,14 +146,14 @@ Uninstall any older sideload before installing a new `.vsix`. Marketplace and Op
 | --- | --- |
 | Editors | VS Code and Cursor 1.90+ |
 | AFFiNE Cloud | `https://app.affine.pro` |
-| Self-hosted | `https://affine.masteryhub-its.com` and any instance that accepts `x-affine-client-version` ≥ 0.26.0 |
+| Self-hosted | Any instance that accepts `x-affine-client-version` ≥ 0.26.0 |
 | Writes (create, rename, duplicate, move, trash, restore) | Require `affine.clientVersion` ≥ 0.26.0 |
 
 ## Settings
 
 | Key | Default |
 | --- | --- |
-| `affine.serverUrl` | `https://affine.masteryhub-its.com` |
+| `affine.serverUrl` | `https://app.affine.pro` |
 | `affine.defaultWorkspaceId` | empty (all workspaces) |
 | `affine.openMode` | `external` (system browser) |
 | `affine.clientVersion` | `0.26.0` |

@@ -2,8 +2,8 @@
   "name": "affine",
   "displayName": "AFFiNE by MasteryHub",
   "description": "MasteryHub ITS client for AFFiNE — browse, preview, and organize self-hosted or Cloud pages inside VS Code and Cursor.",
-  "version": "0.5.0",
-  "publisher": "masteryhub-its",
+  "version": "1.0.0",
+  "publisher": "MasteryHubITS",
   "license": "MIT",
   "author": "MasteryHub ITS",
   "private": false,
@@ -21,8 +21,13 @@
     "node": ">=20.0.0"
   },
   "categories": [
+    "Notebooks",
     "Other"
   ],
+  "galleryBanner": {
+    "color": "#181818",
+    "theme": "dark"
+  },
   "keywords": [
     "affine",
     "notes",
@@ -45,7 +50,7 @@
       "properties": {
         "affine.serverUrl": {
           "type": "string",
-          "default": "https://affine.masteryhub-its.com",
+          "default": "https://app.affine.pro",
           "description": "Base URL of the AFFiNE instance (Global only — workspace/folder settings are ignored so a cloned repo cannot retarget your token). Use https://app.affine.pro for AFFiNE Cloud, or your self-hosted URL (no trailing slash)."
         },
         "affine.defaultWorkspaceId": {
@@ -251,7 +256,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "validate": "npm run type-check && npm run lint && npm run format:check && npm test",
-    "package": "npm run compile && vsce package --no-dependencies"
+    "package": "npm run compile && vsce package --no-dependencies",
+    "screenshots": "esbuild scripts/capture-screenshots.ts --bundle --platform=node --format=cjs --outfile=/tmp/affine-capture-screenshots.js && node /tmp/affine-capture-screenshots.js"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
@@ -260,6 +266,7 @@
     "@typescript-eslint/eslint-plugin": "^8.20.0",
     "@typescript-eslint/parser": "^8.20.0",
     "@vscode/vsce": "^3.2.2",
+    "ovsx": "^0.10.6",
     "esbuild": "^0.28.2",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",

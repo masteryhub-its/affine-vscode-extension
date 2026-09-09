@@ -1,6 +1,6 @@
 import { OpenMode } from './utils/enums/open-mode.enum';
 
-export const DEFAULT_SERVER_URL = 'https://affine.masteryhub-its.com';
+export const DEFAULT_SERVER_URL = 'https://app.affine.pro';
 export const DEFAULT_CLIENT_VERSION = '0.26.0';
 export const DEFAULT_OPEN_MODE = OpenMode.EXTERNAL;
 export const ACCESS_TOKEN_SECRET_KEY = 'affine.credential';

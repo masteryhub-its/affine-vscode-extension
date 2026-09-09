@@ -1,6 +1,7 @@
 .vscode/**
 .vscode-test/**
 src/**
+scripts/**
 **/*.spec.ts
 **/*.d.ts
 **/*.d.ts.map

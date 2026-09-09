@@ -3,7 +3,7 @@ import { buildDocumentUrl, buildWorkspaceBlobUrl, buildWorkspaceRootDocUrl, docu
 
 describe('buildDocumentUrl', () => {
   it('builds the AFFiNE workspace document path', () => {
-    expect(buildDocumentUrl('https://affine.masteryhub-its.com', 'ws-1', 'doc-2')).toBe('https://affine.masteryhub-its.com/workspace/ws-1/doc-2');
+    expect(buildDocumentUrl('https://affine.example.com', 'ws-1', 'doc-2')).toBe('https://affine.example.com/workspace/ws-1/doc-2');
   });
 
   it('encodes ids', () => {

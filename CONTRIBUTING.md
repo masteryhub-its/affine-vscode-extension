@@ -23,7 +23,7 @@ Use this when something in **this VS Code / Cursor client** is wrong (sidebar, p
 1. Search [existing issues](https://github.com/masteryhub-its/affine-vscode-extension/issues) so we do not duplicate work.
 2. Open **[Bug report](https://github.com/masteryhub-its/affine-vscode-extension/issues/new?template=bug_report.yml)**.
 3. Fill in:
-   - Extension version (for example `0.5.0`)
+   - Extension version (for example `1.0.0`)
    - Editor (VS Code or Cursor, and the version if you know it)
    - AFFiNE server URL (Cloud or self-hosted — **no tokens**)
    - What you did, what you expected, what happened

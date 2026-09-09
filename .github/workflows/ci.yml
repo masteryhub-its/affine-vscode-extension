@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
 
+# Catalog smoke (250 docs, 2s cold-sync budget) runs inside `npm run validate` via src/sync/catalog-smoke.spec.ts.
+
 jobs:
   verify:
     runs-on: ubuntu-latest

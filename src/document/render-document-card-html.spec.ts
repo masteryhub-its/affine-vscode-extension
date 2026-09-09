@@ -4,12 +4,12 @@ describe('renderDocumentCardHtml', () => {
   it('renders a local open page without embedding AFFiNE in an iframe', () => {
     const html = renderDocumentCardHtml({
       title: 'Roadmap',
-      url: 'https://affine.masteryhub-its.com/workspace/ws/doc',
+      url: 'https://affine.example.com/workspace/ws/doc',
       nonce: 'n1',
       cspSource: 'https://example',
     });
     expect(html).toContain('Roadmap');
-    expect(html).toContain('https://affine.masteryhub-its.com/workspace/ws/doc');
+    expect(html).toContain('https://affine.example.com/workspace/ws/doc');
     expect(html).toContain('Open in browser');
     expect(html).toContain('id="open-external"');
     expect(html).toContain('do not have access');

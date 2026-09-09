@@ -1,13 +1,13 @@
 # Features
 
-Complete list of what **AFFiNE by MasteryHub** (v0.5.0) does in VS Code and Cursor. The [README](./README.md) is the short version. This file is the catalog.
+Complete list of what **AFFiNE by MasteryHub** (v1.0.0) does in VS Code and Cursor. The [README](./README.md) is the short version. This file is the catalog.
 
 This client talks to **self-hosted AFFiNE** or **AFFiNE Cloud** over GraphQL, REST, and Yjs. It is **not** an official Toeverything product. Editing still happens in the AFFiNE web app; this extension is the bridge next to your code.
 
 ## Connect and account
 
 - Open the AFFiNE activity-bar icon (triangle) to sign in.
-- Server presets: **MasteryHub** (`https://affine.masteryhub-its.com`), **AFFiNE Cloud** (`https://app.affine.pro`), or a **custom** self-hosted URL (no trailing slash).
+- Server presets: **AFFiNE Cloud** (`https://app.affine.pro`) or a **custom** self-hosted URL (no trailing slash).
 - Save server from the sidebar. Sign out first if you need to switch instances.
 - Sign in with an **access token**, or **email and password**. Password is used once to mint a named token and is not stored.
 - Sign out from the sidebar, the Pages / AFFiNE toolbar, or the command palette.
@@ -135,7 +135,7 @@ Click a page (or open it from Search / Open Document) for a **read-only** previe
 
 | Key | Default | Effect |
 | --- | --- | --- |
-| `affine.serverUrl` | `https://affine.masteryhub-its.com` | Instance base URL. Cloud: `https://app.affine.pro`. No trailing slash. Global only. |
+| `affine.serverUrl` | `https://app.affine.pro` | Instance base URL. Self-hosted: your URL, no trailing slash. Global only. |
 | `affine.defaultWorkspaceId` | empty | If set, search and Open Document target that workspace when it exists. |
 | `affine.openMode` | `external` | Always the system browser. Simple Browser has no AFFiNE login session. |
 | `affine.clientVersion` | `0.26.0` | `x-affine-client-version` header. Must stay ≥ 0.26.0 for write paths. |
@@ -148,11 +148,10 @@ What we actually run against. This is not a CI matrix.
 | --- | --- |
 | Editors | VS Code and Cursor **1.90+** |
 | AFFiNE Cloud | `https://app.affine.pro` |
-| MasteryHub self-hosted | `https://affine.masteryhub-its.com` |
-| Other self-hosted | Any instance that accepts `x-affine-client-version` ≥ **0.26.0** |
+| Self-hosted | Any instance that accepts `x-affine-client-version` ≥ **0.26.0** |
 | Writes | Create, rename, duplicate, move, trash, restore need that client version (output channel warns if lower) |
 
-Install from [GitHub Releases](https://github.com/masteryhub-its/affine-vscode-extension/releases) or `npm run package`. Marketplace and Open VSX listing are still on the roadmap.
+Install from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=MasteryHubITS.affine), [Open VSX](https://open-vsx.org/extension/MasteryHubITS/affine), [GitHub Releases](https://github.com/masteryhub-its/affine-vscode-extension/releases), or `npm run package`. Store publish runs from a GitHub Release (`.github/workflows/publish.yml`) once `VSCE_PAT` and `OVSX_PAT` are set.
 
 ## Security and diagnostics
 
@@ -171,12 +170,11 @@ These are out of scope, not missing by accident:
 - Embedding the AFFiNE web app in an iframe or Simple Browser
 - Official AFFiNE MCP (needs Copilot on the server)
 - OAuth (Google / GitHub) as the editor sign-in
-- Visual Studio Marketplace / Open VSX listing (install from the `.vsix` until that ships)
 
 ## Related docs
 
 - [README.md](./README.md) — product story, install, contribute
-- [ROADMAP.md](./ROADMAP.md) — planned features by release (v1.0 marketplace)
+- [ROADMAP.md](./ROADMAP.md) — planned features by release
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — issues and pull requests
 - [CHANGELOG.md](./CHANGELOG.md) — what landed in each version
 - [SECURITY.md](./SECURITY.md) — vulnerability reports

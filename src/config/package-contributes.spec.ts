@@ -11,11 +11,21 @@ interface CommandPaletteEntry {
   readonly when: string | undefined;
 }
 
+interface ServerUrlContribution {
+  readonly default: string;
+}
+
 interface ExtensionPackage {
+  readonly publisher: string;
   readonly contributes: {
     readonly commands: readonly ContributedCommand[];
     readonly menus: {
       readonly commandPalette: readonly CommandPaletteEntry[];
+    };
+    readonly configuration: {
+      readonly properties: {
+        readonly 'affine.serverUrl': ServerUrlContribution;
+      };
     };
   };
 }
@@ -55,5 +65,13 @@ describe('package command palette', () => {
     expect(pkg.contributes.commands.some((item) => item.command === 'affine.openLink')).toBe(true);
     expect(paletteWhen(pkg, 'affine.createPage')).not.toBe('false');
     expect(paletteWhen(pkg, 'affine.openLink')).not.toBe('false');
+  });
+
+  it('defaults the server to AFFiNE Cloud', () => {
+    expect(pkg.contributes.configuration.properties['affine.serverUrl'].default).toBe('https://app.affine.pro');
+  });
+
+  it('uses the Visual Studio Marketplace publisher id', () => {
+    expect(pkg.publisher).toBe('MasteryHubITS');
   });
 });

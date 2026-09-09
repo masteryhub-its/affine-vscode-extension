@@ -4,7 +4,7 @@ import { OpenMode } from '../utils/enums/open-mode.enum';
 
 describe('normalizeServerUrl', () => {
   it('strips whitespace and a trailing slash', () => {
-    expect(normalizeServerUrl(' https://affine.masteryhub-its.com/ ')).toBe('https://affine.masteryhub-its.com');
+    expect(normalizeServerUrl(' https://affine.example.com/ ')).toBe('https://affine.example.com');
   });
 
   it('keeps a non-root path without a trailing slash', () => {
@@ -41,12 +41,12 @@ describe('preferredServerUrlRaw', () => {
   it('ignores workspace and folder overrides and prefers global', () => {
     expect(
       preferredServerUrlRaw({
-        globalValue: 'https://affine.masteryhub-its.com',
+        globalValue: 'https://affine.example.com',
         defaultValue: 'https://app.affine.pro',
         workspaceValue: 'https://attacker.example',
         workspaceFolderValue: 'https://also-attacker.example',
       })
-    ).toBe('https://affine.masteryhub-its.com');
+    ).toBe('https://affine.example.com');
   });
 
   it('falls back to the package default when global is unset', () => {
@@ -109,7 +109,7 @@ describe('normalizeSettings', () => {
         clientVersion: '',
       })
     ).toEqual({
-      serverUrl: 'https://affine.masteryhub-its.com',
+      serverUrl: 'https://app.affine.pro',
       defaultWorkspaceId: undefined,
       openMode: OpenMode.EXTERNAL,
       clientVersion: '0.26.0',

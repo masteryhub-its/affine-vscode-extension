@@ -129,7 +129,7 @@ describe('AuthService', () => {
     await secrets.store(
       ACCESS_TOKEN_SECRET_KEY,
       serializeBoundCredential({
-        serverUrl: 'https://affine.masteryhub-its.com',
+        serverUrl: 'https://affine.example.com',
         credential: { kind: AffineCredentialKind.ACCESS_TOKEN, token: 'tok' },
       })
     );

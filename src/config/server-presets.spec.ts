@@ -2,16 +2,15 @@ import { AFFINE_CLOUD_URL, AFFINE_SERVER_PRESETS, selectedServerPresetId } from 
 import { AffineServerPresetId } from '../utils/enums/affine-server-preset-id.enum';
 
 describe('AFFINE_SERVER_PRESETS', () => {
-  it('includes AFFiNE Cloud and the MasteryHub self-hosted instance', () => {
+  it('ships AFFiNE Cloud as the only named preset', () => {
     expect(AFFINE_CLOUD_URL).toBe('https://app.affine.pro');
-    expect(AFFINE_SERVER_PRESETS.map((preset) => preset.id)).toEqual([AffineServerPresetId.MASTERYHUB, AffineServerPresetId.CLOUD]);
+    expect(AFFINE_SERVER_PRESETS).toEqual([{ id: AffineServerPresetId.CLOUD, label: 'AFFiNE Cloud', url: AFFINE_CLOUD_URL }]);
   });
 });
 
 describe('selectedServerPresetId', () => {
-  it('matches a known preset url', () => {
+  it('matches the Cloud preset url', () => {
     expect(selectedServerPresetId('https://app.affine.pro')).toBe(AffineServerPresetId.CLOUD);
-    expect(selectedServerPresetId('https://affine.masteryhub-its.com')).toBe(AffineServerPresetId.MASTERYHUB);
   });
 
   it('treats any other host as custom self-hosted', () => {

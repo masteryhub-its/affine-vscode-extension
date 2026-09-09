@@ -1,7 +1,7 @@
 import { detectAffinePageUrls } from './detect-links';
 
 describe('detectAffinePageUrls', () => {
-  const server = 'https://affine.masteryhub-its.com';
+  const server = 'https://affine.example.com';
 
   it('detects workspace page URLs for the configured server', () => {
     const text = `See ${server}/workspace/ws-1/doc-42 and also ${server}/workspace/ws-1/doc-42/`;

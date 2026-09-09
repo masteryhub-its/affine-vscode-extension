@@ -2,16 +2,16 @@
 
 Product plan for the VS Code / Cursor client. **Shipped behavior** is in [FEATURES.md](./FEATURES.md). This file is the forward-looking catalog: phases, priorities, and permanent non-goals.
 
-**Extension id:** `masteryhub-its.affine`  
-**Current release:** v0.5.0  
-**Default server:** `https://affine.masteryhub-its.com` (Global only)  
+**Extension id:** `MasteryHubITS.affine`  
+**Current release:** v1.0.0  
+**Default server:** `https://app.affine.pro` (Global only; or your self-hosted URL)  
 **Stack:** GraphQL + REST + Yjs (Socket.IO) — not Markdown on disk
 
 ---
 
 ## Honest assessment — should you install today?
 
-**Short answer: yes for read-heavy spec work beside code.** v0.5.0 covers browse, preview (including tables, callouts, same-origin images), organize (new page/folder, rename, duplicate, restore), and links from the editor. You still open AFFiNE in the browser to edit page bodies.
+**Short answer: yes for read-heavy spec work beside code.** v1.0.0 covers browse, preview (including tables, callouts, same-origin images), organize (new page/folder, rename, duplicate, restore), and links from the editor. You still open AFFiNE in the browser to edit page bodies.
 
 ### What you can do today (installed)
 
@@ -27,7 +27,7 @@ Product plan for the VS Code / Cursor client. **Shipped behavior** is in [FEATUR
 
 | Milestone | Minimum bar for “install this” |
 | --- | --- |
-| **v0.5 (now)** | Catalog + preview + light organize + links from code — worth it if you *reference* docs beside code. |
+| **v1.0 (now)** | Marketplace / Open VSX + screenshots + catalog smoke — install from the editor when the listing is live. |
 | **Never (by design)** | In-editor rich-text editing of Yjs bodies — use AFFiNE web. |
 
 **Recommendation:** Install for sidebar + preview + links. Do not expect an AFFiNE replacement inside VS Code.
@@ -43,6 +43,12 @@ Product plan for the VS Code / Cursor client. **Shipped behavior** is in [FEATUR
 | Sidebar + tree first; palette for search, open, new page/folder, restore, open link, sync, sign-in, force reload | Matches CODE_STANDARDS UI bar |
 | TDD: failing `*.spec.ts` before production code | Same toolchain as Plane plugin |
 | `npm run validate` green before merge | Types, lint, format, tests |
+
+---
+
+## Shipped — v1.0.0
+
+See [FEATURES.md](./FEATURES.md). v0.3–v1.0 from this roadmap are implemented, including Marketplace / Open VSX publish workflow, README screenshots, and a 250-doc / 2s catalog smoke in CI.
 
 ---
 
@@ -97,19 +103,19 @@ See [FEATURES.md](./FEATURES.md). v0.3–v0.5 from this roadmap are implemented 
 
 ---
 
-## v1.0 — Stable product
+## v1.0 — Stable product (shipped)
 
 **Goal:** Public OSS release others can install without a `.vsix` handoff.
 
 | Feature | Detail |
 | --- | --- |
-| Visual Studio Marketplace listing | Publisher `masteryhub-its`, CI publish workflow |
-| Open VSX listing | For VSCodium / compatible editors |
-| README + FEATURES parity | Install from marketplace, screenshots, short demo GIF |
+| Visual Studio Marketplace listing | Publisher `masteryhub-its`, CI publish on GitHub Release |
+| Open VSX listing | Same `.vsix`, `ovsx publish` |
+| README + FEATURES parity | Install from marketplace, screenshots from real sidebar/preview HTML |
 | CHANGELOG discipline | One entry per release; semver |
-| Compatibility matrix | Documented in README / FEATURES for Cloud + MasteryHub self-hosted + clientVersion ≥ 0.26.0. CI smoke matrix is still v1.0. |
+| Compatibility matrix | Documented in README / FEATURES for Cloud + self-hosted + clientVersion ≥ 0.26.0 |
 | Issue templates | Bug / feature / security (already in CONTRIBUTING) |
-| Performance budget | Cold sync under N seconds for MasteryHub-sized workspace (define N in CI smoke) |
+| Performance budget | Cold catalog map of 250 docs under 2s (`src/sync/catalog-smoke.spec.ts`) |
 
 ---
 
@@ -147,21 +153,20 @@ These stay out of scope by design (also in [FEATURES.md](./FEATURES.md)):
 | --- | --- |
 | Security | Bound credential, Global server URL, redirect manual, CSP, `formatAffineError` redaction, `openAffineUrl` allowlist |
 | Tests | Fixture JSON for GraphQL responses; Yjs snapshot fixtures per block type |
-| CI | `npm run validate` on PR; optional smoke against loopback mock server |
+| CI | `npm run validate` on PR (includes 250-doc / 2s catalog smoke); publish job on GitHub Release |
 | Docs | Keep FEATURES.md = shipped; ROADMAP.md = planned; CHANGELOG = releases |
 
 ---
 
 ## Suggested implementation order (next)
 
-1. **v1.0** marketplace + Open VSX listing (compatibility is already in README / FEATURES)
-2. Research items only after that (v2.0+)
+1. Research items only after marketplace listings are live (v2.0+)
 
 ---
 
 ## Related
 
-- [FEATURES.md](./FEATURES.md) — what v0.5.0 does today  
+- [FEATURES.md](./FEATURES.md) — what v1.0.0 does today  
 - [CODE_STANDARDS.md](./CODE_STANDARDS.md) — engineering bar  
 - [SECURITY.md](./SECURITY.md) — vulnerability reports  
 - Plane sibling: [plane-vscode-extension ROADMAP](https://github.com/masteryhub-its/plane-vscode-extension/blob/main/ROADMAP.md) (separate product plan)

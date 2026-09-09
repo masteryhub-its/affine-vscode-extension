@@ -1,6 +1,7 @@
+import { DEFAULT_SERVER_URL } from '../constants';
 import { AffineServerPresetId } from '../utils/enums/affine-server-preset-id.enum';
 
-export const AFFINE_CLOUD_URL = 'https://app.affine.pro';
+export const AFFINE_CLOUD_URL = DEFAULT_SERVER_URL;
 
 export interface AffineServerPreset {
   readonly id: AffineServerPresetId;
@@ -8,10 +9,7 @@ export interface AffineServerPreset {
   readonly url: string;
 }
 
-export const AFFINE_SERVER_PRESETS: readonly AffineServerPreset[] = [
-  { id: AffineServerPresetId.MASTERYHUB, label: 'MasteryHub', url: 'https://affine.masteryhub-its.com' },
-  { id: AffineServerPresetId.CLOUD, label: 'AFFiNE Cloud', url: AFFINE_CLOUD_URL },
-];
+export const AFFINE_SERVER_PRESETS: readonly AffineServerPreset[] = [{ id: AffineServerPresetId.CLOUD, label: 'AFFiNE Cloud', url: AFFINE_CLOUD_URL }];
 
 export function selectedServerPresetId(serverUrl: string): AffineServerPresetId {
   const match = AFFINE_SERVER_PRESETS.find((preset) => preset.url === serverUrl);
