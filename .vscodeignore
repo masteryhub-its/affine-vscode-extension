@@ -19,6 +19,7 @@ CODE_STANDARDS.md
 SECURITY.md
 SUPPORT.md
 AGENTS.md
+.masteryhub-playbook.yml
 .cursor/**
 coverage/**
 node_modules/**

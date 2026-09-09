@@ -1,6 +1,6 @@
 # Code standards
 
-These rules apply to MasteryHub **editor plugins** (this AFFiNE extension, and the Plane plugin that will follow the same shape). Copy this file into a new plugin repo as-is, then add product-specific notes at the bottom.
+These rules apply to MasteryHub **editor plugins** (this AFFiNE extension and [plane-vscode-extension](https://github.com/masteryhub-its/plane-vscode-extension)). Copy this file into a new plugin repo as-is, then add product-specific notes at the bottom.
 
 The bar is: **strict TypeScript, named types, tests first, `npm run validate` is green.**
 
@@ -88,8 +88,8 @@ Product-specific folders (Yjs, Plane API, …) sit beside those.
 ## UI
 
 - User-facing flows go through the sidebar / tree first.
-- The Command Palette may expose search, open document, sign-in, sync, force reload, and sign out.
-- Hide tree-item-only commands (move, trash) from the palette with `"when": "false"`.
+- The Command Palette may expose search, open document, sign-in, sync, force reload, sign out, new page, new folder, restore, and open link.
+- Hide tree-item-only commands (move, trash, rename, duplicate) from the palette with `"when": "false"`.
 - After a `.vsix` install, tell the user to **restart** the editor.
 
 ## Secrets and network

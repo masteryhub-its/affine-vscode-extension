@@ -2,7 +2,7 @@
 
 ## 0.5.0 — 2026-08-28
 
-Local build covering the v0.3–v0.5 roadmap.
+Sideload build. Roadmap items labeled v0.3–v0.5 shipped in this version; **0.3.0 and 0.4.0 were not tagged separately**.
 
 - New page, new Organize folder, restore from trash, rename, duplicate
 - Open AFFiNE Link; hover titles on known page URLs; Global-only server URL copy
@@ -15,7 +15,7 @@ Local build covering the v0.3–v0.5 roadmap.
 
 ## 0.2.0
 
-Local build until we publish to the Visual Studio Marketplace and Open VSX.
+First sideload build (sign-in, sidebar, preview, move, trash, search).
 
 - Sign in (token or email/password), sidebar, nested Organize folders, server presets
 - Local read-only Yjs preview: authors, inline @mentions, linked pages, headings, lists, code, quotes, and related blocks

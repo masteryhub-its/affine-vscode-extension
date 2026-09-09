@@ -140,6 +140,20 @@ Click a page (or open it from Search / Open Document) for a **read-only** previe
 | `affine.openMode` | `external` | Always the system browser. Simple Browser has no AFFiNE login session. |
 | `affine.clientVersion` | `0.26.0` | `x-affine-client-version` header. Must stay ≥ 0.26.0 for write paths. |
 
+## Compatibility
+
+What we actually run against. This is not a CI matrix.
+
+| Layer | Version / URL |
+| --- | --- |
+| Editors | VS Code and Cursor **1.90+** |
+| AFFiNE Cloud | `https://app.affine.pro` |
+| MasteryHub self-hosted | `https://affine.masteryhub-its.com` |
+| Other self-hosted | Any instance that accepts `x-affine-client-version` ≥ **0.26.0** |
+| Writes | Create, rename, duplicate, move, trash, restore need that client version (output channel warns if lower) |
+
+Install from [GitHub Releases](https://github.com/masteryhub-its/affine-vscode-extension/releases) or `npm run package`. Marketplace and Open VSX listing are still on the roadmap.
+
 ## Security and diagnostics
 
 - Tokens only in Secret Storage.
@@ -166,3 +180,4 @@ These are out of scope, not missing by accident:
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — issues and pull requests
 - [CHANGELOG.md](./CHANGELOG.md) — what landed in each version
 - [SECURITY.md](./SECURITY.md) — vulnerability reports
+- `.masteryhub-playbook.yml` — product pin (`masteryhub-its` / `1.0`)

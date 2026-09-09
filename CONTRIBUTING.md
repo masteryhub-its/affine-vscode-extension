@@ -18,12 +18,12 @@ Pick a form from [New issue](https://github.com/masteryhub-its/affine-vscode-ext
 
 ### Bug
 
-Use this when something in **this VS Code / Cursor client** is wrong (sidebar, preview, sign-in, move, trash, sync).
+Use this when something in **this VS Code / Cursor client** is wrong (sidebar, preview, sign-in, search, move, trash, rename, duplicate, restore, sync).
 
 1. Search [existing issues](https://github.com/masteryhub-its/affine-vscode-extension/issues) so we do not duplicate work.
 2. Open **[Bug report](https://github.com/masteryhub-its/affine-vscode-extension/issues/new?template=bug_report.yml)**.
 3. Fill in:
-   - Extension version (for example `0.2.0`)
+   - Extension version (for example `0.5.0`)
    - Editor (VS Code or Cursor, and the version if you know it)
    - AFFiNE server URL (Cloud or self-hosted — **no tokens**)
    - What you did, what you expected, what happened
@@ -116,16 +116,16 @@ If the change is user-facing, update [README.md](./README.md) and [FEATURES.md](
 
 A maintainer will review types, tests, and whether VS Code APIs stayed in `src/vscode/`. CI must stay green. You may be asked for changes; push more commits to the same branch.
 
-Once merged, maintainers ship a `.vsix` on GitHub Releases when they cut a version. Publishing to the Visual Studio Marketplace and Open VSX comes later.
+Once merged, maintainers bump the version, run `npm run package`, and attach the `.vsix` to a GitHub Release. Marketplace and Open VSX listing come later ([ROADMAP.md](./ROADMAP.md)).
 
 ## If you just want to use it
 
-Install the `.vsix` from [Releases](https://github.com/masteryhub-its/affine-vscode-extension/releases) (see [README](./README.md)). Star the repo if it saves you time — that is how other self-hosted teams find it.
+Install the `.vsix` from [Releases](https://github.com/masteryhub-its/affine-vscode-extension/releases) (see [README](./README.md#install)). Star the repo if it saves you time — that is how other self-hosted teams find it.
 
 ## Releases (maintainers)
 
-Bump `package.json` version, update [CHANGELOG.md](./CHANGELOG.md), run `npm run package`, and attach the `.vsix` to a GitHub Release.
+Bump `package.json` version, update [CHANGELOG.md](./CHANGELOG.md), run `npm run package`, and attach the `.vsix` to a GitHub Release when you cut one. Marketplace / Open VSX is a later step ([ROADMAP.md](./ROADMAP.md)).
 
 ## Plane plugin
 
-When `plane-vscode-extension` exists, copy this file (with repo URLs), [CODE_STANDARDS.md](./CODE_STANDARDS.md), `.github/` templates and workflows, and the same ESLint / Prettier / `tsconfig` strictness. Keep one contribution experience across both plugins.
+The sibling repo is [plane-vscode-extension](https://github.com/masteryhub-its/plane-vscode-extension). Keep one contribution experience: this file (with repo URLs), [CODE_STANDARDS.md](./CODE_STANDARDS.md), `.github/` templates and workflows, and the same ESLint / Prettier / `tsconfig` strictness.

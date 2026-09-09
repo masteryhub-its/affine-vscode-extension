@@ -40,7 +40,7 @@ Product plan for the VS Code / Cursor client. **Shipped behavior** is in [FEATUR
 | --- | --- |
 | Credentials in Secret Storage only, bound to Global `affine.serverUrl` | Cloned `.vscode/settings.json` must not retarget tokens |
 | Open the real AFFiNE app in the system browser for editing | No iframe / Simple Browser — no session cookies there |
-| Sidebar + tree first; palette for search, open, sync, sign-in, force reload | Matches CODE_STANDARDS UI bar |
+| Sidebar + tree first; palette for search, open, new page/folder, restore, open link, sync, sign-in, force reload | Matches CODE_STANDARDS UI bar |
 | TDD: failing `*.spec.ts` before production code | Same toolchain as Plane plugin |
 | `npm run validate` green before merge | Types, lint, format, tests |
 
@@ -107,7 +107,7 @@ See [FEATURES.md](./FEATURES.md). v0.3–v0.5 from this roadmap are implemented 
 | Open VSX listing | For VSCodium / compatible editors |
 | README + FEATURES parity | Install from marketplace, screenshots, short demo GIF |
 | CHANGELOG discipline | One entry per release; semver |
-| Compatibility matrix | Document tested AFFiNE server versions (Cloud + self-hosted) |
+| Compatibility matrix | Documented in README / FEATURES for Cloud + MasteryHub self-hosted + clientVersion ≥ 0.26.0. CI smoke matrix is still v1.0. |
 | Issue templates | Bug / feature / security (already in CONTRIBUTING) |
 | Performance budget | Cold sync under N seconds for MasteryHub-sized workspace (define N in CI smoke) |
 
@@ -154,7 +154,7 @@ These stay out of scope by design (also in [FEATURES.md](./FEATURES.md)):
 
 ## Suggested implementation order (next)
 
-1. **v1.0** marketplace publish + compatibility matrix  
+1. **v1.0** marketplace + Open VSX listing (compatibility is already in README / FEATURES)
 2. Research items only after that (v2.0+)
 
 ---
