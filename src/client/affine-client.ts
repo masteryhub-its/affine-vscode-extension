@@ -1,11 +1,13 @@
-import { ACCESS_TOKEN_NAME, CLIENT_VERSION_HEADER, DOC_PAGE_SIZE, MAX_DOC_PAGES, SIGN_IN_PATH } from '../constants';
-import { AffineError, AffineErrorCode } from '../errors/affine-error';
+import { ACCESS_TOKEN_NAME, CLIENT_VERSION_HEADER, DOC_PAGE_SIZE, MAX_DOC_PAGES, MAX_MENTION_LOOKUPS, MENTION_LOOKUP_CONCURRENCY, SIGN_IN_PATH } from '../constants';
+import { AffineError, AffineErrorCode, isAffineError } from '../errors/affine-error';
+import { formatAffineError } from '../errors/format-error';
 import type { AffineSync } from '../sync/affine-sync';
 import { encodeCreateFolderUpdate } from '../yjs/encode-create-folder-update';
 import { encodeFolderMoveUpdate, emptyYDocBin } from '../yjs/encode-folder-move-update';
 import { encodeCreatePageMetaUpdate, encodeRenamePageUpdate, encodeRestorePageUpdate, encodeTrashPageUpdate } from '../yjs/encode-page-meta-update';
 import { encodeEmptyPageDoc } from '../yjs/encode-page-doc';
 import { parseCollections } from '../organize/collections';
+import { nextOrganizeIndex } from '../organize/organize-index';
 import { parseFoldersTable } from '../yjs/parse-folders-table';
 import { mentionUserIds, parsePageDoc, type ParsedPage } from '../yjs/parse-page-doc';
 import { parseTrashedPages, parseWorkspaceRoot } from '../yjs/parse-workspace-root';
@@ -33,6 +35,7 @@ import { cookieHeaderFromRecords, findCookieValue, affineSessionCookies, parseSe
 import { credentialHeaders } from './credential-headers';
 import { buildWorkspaceDocUrl, documentTitle, foldersTableDocId, resolveAssetUrl } from './document-url';
 import { GraphQLClient } from './graphql-client';
+import { lookupMentions } from './mention-lookup';
 import type { HttpClient } from './http.types';
 import { CURRENT_USER_QUERY, GENERATE_ACCESS_TOKEN_MUTATION, PAGE_AUTHORS_QUERY, PUBLIC_USER_QUERY, SEARCH_DOCS_QUERY, WORKSPACE_DOCS_QUERY, WORKSPACES_QUERY } from './queries';
 
@@ -42,6 +45,8 @@ export interface AffineClientOptions {
   readonly http: HttpClient;
   readonly credential: AffineCredential | undefined;
   readonly sync?: AffineSync;
+  /** Called with a short note when the client takes a fallback path, so it can be logged instead of staying silent. */
+  readonly onDiagnostic?: (message: string) => void;
 }
 
 interface GraphQLUserFields {
@@ -199,7 +204,8 @@ export class AffineClient {
         favorites: documents.filter((_, index) => parsed.pages[index]?.favorite === true),
         collections: parseCollections(folders),
       };
-    } catch {
+    } catch (error: unknown) {
+      this.options.onDiagnostic?.(`Could not read the workspace root for ${workspaceId} (${formatAffineError(error)}); using the document list instead.`);
       const documents = (await this.listAllDocs(workspaceId)).filter((document) => isListedWorkspaceDoc(workspaceId, document.id));
       return { name: null, documents, tree: documentsToTree(documents), favorites: [], collections: [] };
     }
@@ -246,9 +252,9 @@ export class AffineClient {
     const title = `Copy of ${documentTitle(source?.title)}`;
     const copyId = crypto.randomUUID();
     const sync = this.requireSync();
-    await sync.pushDocUpdate({ workspaceId, docId: copyId, update: pageBin });
+    await this.pushStep('copy the page document', () => sync.pushDocUpdate({ workspaceId, docId: copyId, update: pageBin }));
     const metaUpdate = encodeCreatePageMetaUpdate(rootBin, { docId: copyId, title });
-    await sync.pushDocUpdate({ workspaceId, docId: workspaceId, update: metaUpdate });
+    await this.pushStep('add the copy to the workspace', () => sync.pushDocUpdate({ workspaceId, docId: workspaceId, update: metaUpdate }));
     return { id: copyId, workspaceId, title, updatedAt: null };
   }
 
@@ -262,9 +268,9 @@ export class AffineClient {
       surfaceId: crypto.randomUUID(),
     });
     const sync = this.requireSync();
-    await sync.pushDocUpdate({ workspaceId: input.workspaceId, docId, update: pageBin });
+    await this.pushStep('create the page document', () => sync.pushDocUpdate({ workspaceId: input.workspaceId, docId, update: pageBin }));
     const metaUpdate = encodeCreatePageMetaUpdate(await this.fetchWorkspaceDoc(input.workspaceId, input.workspaceId), { docId, title: input.title });
-    await sync.pushDocUpdate({ workspaceId: input.workspaceId, docId: input.workspaceId, update: metaUpdate });
+    await this.pushStep('add the page to the workspace', () => sync.pushDocUpdate({ workspaceId: input.workspaceId, docId: input.workspaceId, update: metaUpdate }));
     if (input.folderId !== null) {
       await this.movePage(input.workspaceId, docId, input.folderId);
     }
@@ -274,12 +280,13 @@ export class AffineClient {
   public async createFolder(input: CreateFolderInput): Promise<void> {
     const foldersId = foldersTableDocId(input.workspaceId);
     const bin = await this.loadFolderBin(input.workspaceId);
+    const records = parseFoldersTable(bin);
     const update = encodeCreateFolderUpdate({
       bin,
       folderId: crypto.randomUUID(),
       parentId: input.parentId,
       title: input.title,
-      index: nextOrganizeIndex(),
+      index: nextOrganizeIndex(records, input.parentId),
     });
     await this.requireSync().pushDocUpdate({ workspaceId: input.workspaceId, docId: foldersId, update });
   }
@@ -287,11 +294,12 @@ export class AffineClient {
   public async movePage(workspaceId: string, docId: string, folderId: string | null): Promise<void> {
     const foldersId = foldersTableDocId(workspaceId);
     const bin = await this.loadFolderBin(workspaceId);
+    const records = parseFoldersTable(bin);
     const update = encodeFolderMoveUpdate({
       bin,
       docId,
       parentId: folderId,
-      index: nextOrganizeIndex(),
+      index: nextOrganizeIndex(records, folderId),
       newRecordId: newOrganizeRecordId(),
     });
     await this.requireSync().pushDocUpdate({ workspaceId, docId: foldersId, update });
@@ -329,8 +337,17 @@ export class AffineClient {
       body: JSON.stringify({ email: input.email, password: input.password }),
     });
 
-    if (response.status < 200 || response.status >= 300) {
+    if (response.status === 401 || response.status === 403) {
       throw new AffineError('Email or password is incorrect', AffineErrorCode.AUTHENTICATION_FAILED);
+    }
+    if (response.status === 429) {
+      throw new AffineError('Too many sign-in attempts. Wait a moment and try again.', AffineErrorCode.AUTHENTICATION_FAILED);
+    }
+    if (response.status >= 500) {
+      throw new AffineError('AFFiNE sign-in is temporarily unavailable (server error). Try again shortly.', AffineErrorCode.HTTP_ERROR);
+    }
+    if (response.status < 200 || response.status >= 300) {
+      throw new AffineError(`AFFiNE sign-in failed with HTTP ${response.status}`, AffineErrorCode.HTTP_ERROR);
     }
 
     const cookies = affineSessionCookies(parseSetCookieHeaders(response.setCookie));
@@ -350,6 +367,9 @@ export class AffineClient {
       const token = await authed.generateAccessToken();
       return { kind: AffineCredentialKind.ACCESS_TOKEN, token: token.token };
     } catch {
+      // Minting is best-effort: current AFFiNE servers removed generateUserAccessToken,
+      // so the session cookie is the only credential available. Callers surface this
+      // as a short-lived credential (see AuthService.signInWithPassword).
       return session;
     }
   }
@@ -371,22 +391,17 @@ export class AffineClient {
   }
 
   private async loadMentionPeople(ids: readonly string[]): Promise<MentionPeople> {
-    const people: Record<string, MentionPerson> = {};
-    for (const id of ids) {
-      try {
-        const data = await this.graphql.request<PublicUserQueryData>({
-          query: PUBLIC_USER_QUERY,
-          variables: { id },
-        });
-        const name = data.publicUserById?.name?.trim();
-        if (name !== undefined && name.length > 0) {
-          people[id] = { name, avatarUrl: resolveAssetUrl(this.options.serverUrl, data.publicUserById?.avatarUrl) };
-        }
-      } catch {
-        continue;
-      }
+    const found = await lookupMentions(ids, (id) => this.loadMentionPerson(id), { maxIds: MAX_MENTION_LOOKUPS, concurrency: MENTION_LOOKUP_CONCURRENCY });
+    return Object.fromEntries(found);
+  }
+
+  private async loadMentionPerson(id: string): Promise<MentionPerson | undefined> {
+    const data = await this.graphql.request<PublicUserQueryData>({ query: PUBLIC_USER_QUERY, variables: { id } });
+    const name = data.publicUserById?.name?.trim();
+    if (name === undefined || name.length === 0) {
+      return undefined;
     }
-    return people;
+    return { name, avatarUrl: resolveAssetUrl(this.options.serverUrl, data.publicUserById?.avatarUrl) };
   }
 
   private toAuthor(user: GraphQLUserFields | null): PageAuthor | undefined {
@@ -411,8 +426,13 @@ export class AffineClient {
   private async loadFolderBin(workspaceId: string): Promise<Uint8Array> {
     try {
       return await this.fetchWorkspaceDoc(workspaceId, foldersTableDocId(workspaceId));
-    } catch {
-      return emptyYDocBin();
+    } catch (error: unknown) {
+      // Only a missing or empty folders doc means "no folders yet". Network/auth/server
+      // failures must rethrow — treating them as empty would duplicate records on move.
+      if (isAffineError(error) && (error.code === AffineErrorCode.NOT_FOUND || error.code === AffineErrorCode.UNEXPECTED_RESPONSE)) {
+        return emptyYDocBin();
+      }
+      throw error;
     }
   }
 
@@ -421,6 +441,16 @@ export class AffineClient {
       throw new AffineError('AFFiNE sync is not configured', AffineErrorCode.SYNC_ERROR);
     }
     return this.options.sync;
+  }
+
+  private async pushStep(step: string, run: () => Promise<void>): Promise<void> {
+    try {
+      await run();
+    } catch (error: unknown) {
+      // A page write is a sequence of pushes. Name the failed step so the caller can
+      // tell which half landed instead of reporting a bare "write failed".
+      throw new AffineError(`Failed to ${step}: ${formatAffineError(error)}`, isAffineError(error) ? error.code : AffineErrorCode.SYNC_ERROR, { cause: error });
+    }
   }
 
   private async fetchWorkspaceDoc(workspaceId: string, docId: string): Promise<Uint8Array> {
@@ -432,6 +462,9 @@ export class AffineClient {
         ...credentialHeaders(this.options.credential),
       },
     });
+    if (response.status === 404) {
+      throw new AffineError(`Workspace document request returned HTTP 404`, AffineErrorCode.NOT_FOUND);
+    }
     if (response.status < 200 || response.status >= 300) {
       throw new AffineError(`Workspace document request failed with HTTP ${response.status}`, AffineErrorCode.HTTP_ERROR);
     }
@@ -449,10 +482,6 @@ function isListedWorkspaceDoc(workspaceId: string, docId: string): boolean {
 
 function documentsToTree(documents: readonly AffineDocument[]): readonly PageTreeNode[] {
   return documents.map((document) => ({ kind: PageTreeKind.DOC, id: document.id, title: documentTitle(document.title), children: [] }));
-}
-
-function nextOrganizeIndex(): string {
-  return `a${Date.now().toString(36)}`;
 }
 
 function newOrganizeRecordId(): string {

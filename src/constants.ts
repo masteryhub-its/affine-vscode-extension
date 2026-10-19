@@ -12,3 +12,6 @@ export const CSRF_HEADER = 'x-affine-csrf-token';
 export const DOC_PAGE_SIZE = 100;
 export const MAX_DOC_PAGES = 50;
 export const RECENT_PAGES_KEY = 'affine.recentPages';
+export const FETCH_TIMEOUT_MS = 60_000;
+export const MAX_MENTION_LOOKUPS = 25;
+export const MENTION_LOOKUP_CONCURRENCY = 4;

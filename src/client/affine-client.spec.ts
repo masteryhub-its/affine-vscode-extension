@@ -8,6 +8,7 @@ import { parsePageDoc } from '../yjs/parse-page-doc';
 import { parseTrashedPages, parseWorkspaceRoot } from '../yjs/parse-workspace-root';
 import { parseFoldersTable } from '../yjs/parse-folders-table';
 import { AffineCredentialKind } from '../utils/enums/affine-credential-kind.enum';
+import { AffineErrorCode } from '../utils/enums/affine-error-code.enum';
 import { HttpMethod } from '../utils/enums/http-method.enum';
 import { PageBlockKind } from '../utils/enums/page-block-kind.enum';
 
@@ -135,9 +136,19 @@ function createFakeHttp(responses: HttpResponse[]): FakeHttp {
 
 class RecordingSync implements AffineSync {
   public readonly pushes: PushDocUpdateInput[] = [];
+  private failure: Error | undefined;
+
+  public failNextWith(error: Error): void {
+    this.failure = error;
+  }
 
   public pushDocUpdate(input: PushDocUpdateInput): Promise<void> {
     this.pushes.push(input);
+    if (this.failure !== undefined) {
+      const error = this.failure;
+      this.failure = undefined;
+      return Promise.reject(error);
+    }
     return Promise.resolve();
   }
 }
@@ -220,6 +231,35 @@ describe('AffineClient', () => {
     expect(requests[0]?.url).toBe('https://affine.example/api/auth/sign-in');
     expect(requests[1]?.headers['Cookie']).toBe('affine_session=sess; affine_csrf_token=csrf');
     expect(JSON.parse(requests[1]?.body ?? '{}')).toMatchObject({ variables: { name: ACCESS_TOKEN_NAME } });
+  });
+
+  it('reports wrong credentials on a 401 from the sign-in endpoint', async () => {
+    const { client } = createFakeHttp([jsonResponse(401, { message: 'unauthorized' })]);
+    const affine = new AffineClient({ serverUrl: 'https://affine.example', clientVersion: '0.25.0', http: client, credential: undefined });
+
+    await expect(affine.signInWithPassword({ email: 'a@b.c', password: 'x' })).rejects.toMatchObject({
+      code: AffineErrorCode.AUTHENTICATION_FAILED,
+      message: 'Email or password is incorrect',
+    });
+  });
+
+  it('reports a rate limit on a 429 from the sign-in endpoint', async () => {
+    const { client } = createFakeHttp([jsonResponse(429, { message: 'slow down' })]);
+    const affine = new AffineClient({ serverUrl: 'https://affine.example', clientVersion: '0.25.0', http: client, credential: undefined });
+
+    await expect(affine.signInWithPassword({ email: 'a@b.c', password: 'x' })).rejects.toMatchObject({
+      code: AffineErrorCode.AUTHENTICATION_FAILED,
+      message: 'Too many sign-in attempts. Wait a moment and try again.',
+    });
+  });
+
+  it('reports a server outage on a 5xx from the sign-in endpoint', async () => {
+    const { client } = createFakeHttp([jsonResponse(503, { message: 'unavailable' })]);
+    const affine = new AffineClient({ serverUrl: 'https://affine.example', clientVersion: '0.25.0', http: client, credential: undefined });
+
+    await expect(affine.signInWithPassword({ email: 'a@b.c', password: 'x' })).rejects.toMatchObject({
+      code: AffineErrorCode.HTTP_ERROR,
+    });
   });
 
   it('falls back to the session cookie when token minting fails', async () => {
@@ -477,6 +517,101 @@ describe('AffineClient', () => {
     expect(moved?.type).toBe(PageTreeKind.DOC);
     expect(moved?.data).toBe('p1');
     expect(moved?.index.length).toBeGreaterThan(0);
+  });
+
+  it('orders new siblings after the last existing index instead of a wall clock (A5)', async () => {
+    const folders = encodeFolders([
+      { id: 'f1', type: PageTreeKind.FOLDER, data: 'Product', index: 'a0' },
+      { id: 'd1', parentId: 'f1', type: PageTreeKind.DOC, data: 'p1', index: 'a0' },
+      { id: 'd2', parentId: 'f1', type: PageTreeKind.DOC, data: 'p2', index: 'a1' },
+    ]);
+    const sync = new RecordingSync();
+    const { client } = createFakeHttp([binaryResponse(200, folders)]);
+    const affine = new AffineClient({
+      serverUrl: 'https://affine.example',
+      clientVersion: '0.25.0',
+      http: client,
+      credential: { kind: AffineCredentialKind.ACCESS_TOKEN, token: 'sk' },
+      sync,
+    });
+
+    await affine.movePage('ws-1', 'p3', 'f1');
+    const merged = new Y.Doc();
+    Y.applyUpdate(merged, folders);
+    Y.applyUpdate(merged, sync.pushes[0]?.update ?? new Uint8Array());
+    const rows = parseFoldersTable(Y.encodeStateAsUpdate(merged));
+    const moved = rows.find((row) => row.data === 'p3');
+    expect(moved).toBeDefined();
+    const newIndex = moved?.index ?? '';
+    expect(newIndex > 'a1').toBe(true);
+    expect(rows.filter((row) => row.parentId === 'f1').every((row, _i, all) => all.every((other) => row.index !== other.index || row.id === other.id))).toBe(true);
+  });
+
+  it('reports which write step failed when a page push is rejected (A4)', async () => {
+    const sync = new RecordingSync();
+    sync.failNextWith(new Error('doc not found'));
+    const { client } = createFakeHttp([binaryResponse(200, new Uint8Array())]);
+    const affine = new AffineClient({
+      serverUrl: 'https://affine.example',
+      clientVersion: '0.25.0',
+      http: client,
+      credential: { kind: AffineCredentialKind.ACCESS_TOKEN, token: 'sk' },
+      sync,
+    });
+
+    await expect(affine.createPage({ workspaceId: 'ws-1', title: 'Plan', folderId: null })).rejects.toThrow(/create the page document/);
+  });
+
+  it('creates the folders record when the folders doc is missing (404)', async () => {
+    const sync = new RecordingSync();
+    const { client, requests } = createFakeHttp([binaryResponse(404, new Uint8Array())]);
+    const affine = new AffineClient({
+      serverUrl: 'https://affine.example',
+      clientVersion: '0.25.0',
+      http: client,
+      credential: { kind: AffineCredentialKind.ACCESS_TOKEN, token: 'sk' },
+      sync,
+    });
+
+    await affine.movePage('ws-1', 'p1', null);
+    expect(requests[0]?.url).toBe('https://affine.example/api/workspaces/ws-1/docs/db%24ws-1%24folders');
+    expect(sync.pushes).toHaveLength(1);
+    expect(sync.pushes[0]?.docId).toBe('db$ws-1$folders');
+  });
+
+  it('rethrows a folders-doc fetch failure instead of moving the page onto an empty table', async () => {
+    const sync = new RecordingSync();
+    const { client } = createFakeHttp([binaryResponse(401, new Uint8Array())]);
+    const affine = new AffineClient({
+      serverUrl: 'https://affine.example',
+      clientVersion: '0.25.0',
+      http: client,
+      credential: { kind: AffineCredentialKind.ACCESS_TOKEN, token: 'sk' },
+      sync,
+    });
+
+    await expect(affine.movePage('ws-1', 'p1', 'f2')).rejects.toThrow(/HTTP 401/);
+    expect(sync.pushes).toHaveLength(0);
+  });
+
+  it('rethrows a folders-doc network failure instead of moving the page onto an empty table', async () => {
+    const sync = new RecordingSync();
+    const requests: HttpRequest[] = [];
+    const networkFailure: HttpClient = (request: HttpRequest): Promise<HttpResponse> => {
+      requests.push(request);
+      return Promise.reject(new TypeError('fetch failed'));
+    };
+    const affine = new AffineClient({
+      serverUrl: 'https://affine.example',
+      clientVersion: '0.25.0',
+      http: networkFailure,
+      credential: { kind: AffineCredentialKind.ACCESS_TOKEN, token: 'sk' },
+      sync,
+    });
+
+    await expect(affine.movePage('ws-1', 'p1', 'f2')).rejects.toThrow(/fetch failed/);
+    expect(requests).toHaveLength(1);
+    expect(sync.pushes).toHaveLength(0);
   });
 
   it('restores a trashed page by pushing a workspace root update', async () => {
