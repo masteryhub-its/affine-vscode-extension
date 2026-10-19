@@ -67,10 +67,15 @@ export function normalizeOpenMode(raw: string): OpenMode {
   return parseOpenMode(raw) ?? DEFAULT_OPEN_MODE;
 }
 
+const CLIENT_VERSION_PATTERN = /^\d+\.\d+(?:\.\d+)?(?:-[0-9A-Za-z.-]+)?$/u;
+
+/** The value is sent as a request header, so anything that is not a version number is replaced by the default. */
 export function normalizeClientVersion(raw: string): string {
   const trimmed = raw.trim();
-  const version = trimmed.length === 0 ? DEFAULT_CLIENT_VERSION : trimmed;
-  return isBelowWebsocketMinimum(version) ? DEFAULT_CLIENT_VERSION : version;
+  if (!CLIENT_VERSION_PATTERN.test(trimmed)) {
+    return DEFAULT_CLIENT_VERSION;
+  }
+  return isBelowWebsocketMinimum(trimmed) ? DEFAULT_CLIENT_VERSION : trimmed;
 }
 
 function isBelowWebsocketMinimum(version: string): boolean {

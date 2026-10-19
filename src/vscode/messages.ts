@@ -8,3 +8,7 @@ export function showAffineError(error: unknown): void {
 export function showAffineInfo(message: string): void {
   void vscode.window.showInformationMessage(message);
 }
+
+export function showAffineWarning(message: string): void {
+  void vscode.window.showWarningMessage(message);
+}

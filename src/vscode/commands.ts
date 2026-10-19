@@ -9,7 +9,7 @@ import { searchAllWorkspaces } from '../search/search-all-workspaces';
 import { resolveSearchWorkspaces } from '../search/resolve-workspaces';
 import { SignInMethod } from '../utils/enums/sign-in-method.enum';
 import { parseDocumentNode, toDocumentNode, toWorkspaceNode, type AffineTreeDocumentNode } from '../tree/tree-model';
-import { showAffineError, showAffineInfo } from './messages';
+import { showAffineError, showAffineInfo, showAffineWarning } from './messages';
 import { openAffineUrl } from './open-url';
 import type { AffineStatusBar } from './status-bar';
 import type { AffineTreeProvider } from './tree-provider';
@@ -94,8 +94,11 @@ export async function signInCommand(ctx: AffineCommandContext): Promise<void> {
   if (password === undefined) {
     return;
   }
-  const user = await ctx.auth.signInWithPassword({ email, password });
-  showAffineInfo(`Signed in as ${user.email}`);
+  const result = await ctx.auth.signInWithPassword({ email, password });
+  showAffineInfo(`Signed in as ${result.user.email}`);
+  if (result.usedSessionFallback) {
+    showAffineWarning('Signed in with a short-lived session. Access-token creation is unavailable on this AFFiNE server, so you may be signed out sooner than expected.');
+  }
   await refreshUi(ctx);
 }
 

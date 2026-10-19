@@ -124,7 +124,7 @@ describe('AuthService', () => {
     expect(stored).toContain('https://affine.example');
   });
 
-  it('clears a credential bound to a different server url', async () => {
+  it('treats a credential bound to a different server url as signed out without deleting it', async () => {
     const secrets = new MemorySecretStore();
     await secrets.store(
       ACCESS_TOKEN_SECRET_KEY,
@@ -144,7 +144,7 @@ describe('AuthService', () => {
     });
 
     await expect(auth.requireClient()).rejects.toMatchObject({ code: AffineErrorCode.NOT_SIGNED_IN });
-    await expect(secrets.get(ACCESS_TOKEN_SECRET_KEY)).resolves.toBeUndefined();
+    await expect(secrets.get(ACCESS_TOKEN_SECRET_KEY)).resolves.toContain('"tok"');
     expect(requests).toHaveLength(0);
   });
 

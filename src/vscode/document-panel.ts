@@ -2,7 +2,7 @@ import { randomBytes } from 'crypto';
 import * as vscode from 'vscode';
 import type { AffineClient } from '../client/affine-client';
 import { buildDocumentUrl } from '../client/document-url';
-import { AFFINE_DOCUMENT_VIEW_TYPE, isAffineDocumentViewType } from '../document/document-panel-id';
+import { AFFINE_DOCUMENT_VIEW_TYPE, documentPanelKey, isAffineDocumentViewType } from '../document/document-panel-id';
 import { renderPageErrorHtml, renderPageHtml, renderPageLoadingHtml } from '../document/render-page-html';
 import { formatAffineError } from '../errors/format-error';
 import { DocumentPanelMessageType } from '../utils/enums/document-panel-message-type.enum';
@@ -19,11 +19,26 @@ export interface OpenAffineDocumentInput {
   readonly tags?: readonly string[] | undefined;
 }
 
+const openPanels = new Map<string, vscode.WebviewPanel>();
+
 export async function openAffineDocumentPanel(input: OpenAffineDocumentInput): Promise<void> {
   const url = buildDocumentUrl(input.serverUrl, input.workspaceId, input.docId);
+  const panelKey = documentPanelKey(input.workspaceId, input.docId);
+  const existing = openPanels.get(panelKey);
+  if (existing !== undefined) {
+    existing.reveal(vscode.ViewColumn.One);
+    return;
+  }
   const panel = vscode.window.createWebviewPanel(AFFINE_DOCUMENT_VIEW_TYPE, input.title, vscode.ViewColumn.One, {
     enableScripts: true,
     retainContextWhenHidden: true,
+    localResourceRoots: [],
+  });
+  openPanels.set(panelKey, panel);
+  let disposed = false;
+  panel.onDidDispose(() => {
+    disposed = true;
+    openPanels.delete(panelKey);
   });
   const nonce = randomBytes(16).toString('hex');
   const cspSource = panel.webview.cspSource;
@@ -40,6 +55,9 @@ export async function openAffineDocumentPanel(input: OpenAffineDocumentInput): P
   });
   try {
     const preview = await input.client.loadPagePreview(input.workspaceId, input.docId);
+    if (disposed) {
+      return;
+    }
     panel.webview.html = renderPageHtml({
       page: preview.page,
       fallbackTitle: input.title,
@@ -53,6 +71,9 @@ export async function openAffineDocumentPanel(input: OpenAffineDocumentInput): P
     });
     panel.title = preview.page.title.trim().length > 0 ? preview.page.title : input.title;
   } catch (error: unknown) {
+    if (disposed) {
+      return;
+    }
     panel.webview.html = renderPageErrorHtml({
       title: input.title,
       message: formatAffineError(error),

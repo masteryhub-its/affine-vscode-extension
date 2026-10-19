@@ -30,6 +30,9 @@ export function activateAffine(context: vscode.ExtensionContext): void {
     secrets: new VsCodeSecretStore(context.secrets),
     settings,
     http: fetchHttpClient,
+    onDiagnostic: (message) => {
+      output.appendLine(message);
+    },
   });
   const statusBar = new AffineStatusBar();
   const tree = new AffineTreeProvider(auth);

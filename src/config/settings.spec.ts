@@ -97,6 +97,14 @@ describe('normalizeClientVersion', () => {
   it('raises a stored 0.25.x value to the websocket minimum', () => {
     expect(normalizeClientVersion('0.25.0')).toBe('0.26.0');
   });
+
+  it.each(['0.27.1', '0.26', '1.2.3', '0.27.0-beta.1'])('accepts %s', (version) => {
+    expect(normalizeClientVersion(version)).toBe(version);
+  });
+
+  it.each(['latest', 'abc', '0.27.x', '1.0 (evil)', '0.27.0\r\nX-Evil: 1', 'v0.27.0'])('replaces %j, which is not a version number, with the default', (version) => {
+    expect(normalizeClientVersion(version)).toBe('0.26.0');
+  });
 });
 
 describe('normalizeSettings', () => {

@@ -14,6 +14,12 @@ export interface CreateAuthServiceInput {
   readonly settings: SettingsReader;
   readonly http: HttpClient;
   readonly createSync?: CreateAffineSync;
+  readonly onDiagnostic?: (message: string) => void;
+}
+
+export interface SignInWithPasswordResult {
+  readonly user: AffineUser;
+  readonly usedSessionFallback: boolean;
 }
 
 export class AuthService {
@@ -35,7 +41,7 @@ export class AuthService {
 
     const serverUrl = this.input.settings.read().serverUrl;
     if (bound.serverUrl !== serverUrl) {
-      await this.clearCredential();
+      // A settings change must not sign the user out: report signed out, keep the credential for the bound server.
       return undefined;
     }
 
@@ -67,6 +73,7 @@ export class AuthService {
       http: this.input.http,
       credential,
       ...(sync === undefined ? {} : { sync }),
+      ...(this.input.onDiagnostic === undefined ? {} : { onDiagnostic: this.input.onDiagnostic }),
     });
   }
 
@@ -96,7 +103,7 @@ export class AuthService {
     return user;
   }
 
-  public async signInWithPassword(input: SignInWithPasswordInput): Promise<AffineUser> {
+  public async signInWithPassword(input: SignInWithPasswordInput): Promise<SignInWithPasswordResult> {
     const email = input.email.trim();
     const password = input.password;
     if (email.length === 0 || password.length === 0) {
@@ -105,7 +112,7 @@ export class AuthService {
     const credential = await this.createClient().signInWithPassword({ email, password });
     const user = await this.createClient(credential).currentUser();
     await this.writeCredential(credential);
-    return user;
+    return { user, usedSessionFallback: credential.kind === AffineCredentialKind.SESSION };
   }
 
   public async currentUser(): Promise<AffineUser | undefined> {
