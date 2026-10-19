@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.0.1 — 2026-10-19
+
+Security and reliability fixes from a full audit. No new screens or commands.
+
+- Requests time out after 60 seconds instead of hanging the sidebar and page panels
+- A failed read of the folders document no longer creates a duplicate folder record when you move a page
+- Folder and page ordering uses valid fractional keys; keys from earlier versions are skipped safely instead of breaking the next insert
+- Create and duplicate page name the step that failed, so a half-finished write is not silent
+- Sign-in separates wrong credentials, rate limiting and server errors
+- Password sign-in says when a short-lived session is used because the server does not create access tokens
+- `affine.clientVersion` must be a version number; anything else is replaced by the default
+- Mention lookups ask for each person once, at most 25, four at a time
+- A settings change no longer deletes the stored credential; `affine.serverUrl` is a user-level setting
+- The same page opens one panel; a panel closed during loading is left alone
+- Falling back from the workspace root to the document list is written to the output channel
+- Untrusted and virtual workspaces declared unsupported
+- Release workflow checks the tag matches the version; runtime dependency audit runs in CI
+
 ## 1.0.0 — 2026-09-09
 
 Public store release: marketplace metadata, screenshots, and a CI catalog smoke budget.

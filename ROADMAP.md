@@ -3,7 +3,7 @@
 Product plan for the VS Code / Cursor client. **Shipped behavior** is in [FEATURES.md](./FEATURES.md). This file is the forward-looking catalog: phases, priorities, and permanent non-goals.
 
 **Extension id:** `MasteryHubITS.affine`  
-**Current release:** v1.0.0  
+**Current release:** v1.0.1  
 **Default server:** `https://app.affine.pro` (Global only; or your self-hosted URL)  
 **Stack:** GraphQL + REST + Yjs (Socket.IO) — not Markdown on disk
 

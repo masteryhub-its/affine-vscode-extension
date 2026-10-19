@@ -1,6 +1,6 @@
 # Features
 
-Complete list of what **AFFiNE by MasteryHub** (v1.0.0) does in VS Code and Cursor. The [README](./README.md) is the short version. This file is the catalog.
+Complete list of what **AFFiNE by MasteryHub** (v1.0.1) does in VS Code and Cursor. The [README](./README.md) is the short version. This file is the catalog.
 
 This client talks to **self-hosted AFFiNE** or **AFFiNE Cloud** over GraphQL, REST, and Yjs. It is **not** an official Toeverything product. Editing still happens in the AFFiNE web app; this extension is the bridge next to your code.
 
@@ -9,7 +9,7 @@ This client talks to **self-hosted AFFiNE** or **AFFiNE Cloud** over GraphQL, RE
 - Open the AFFiNE activity-bar icon (triangle) to sign in.
 - Server presets: **AFFiNE Cloud** (`https://app.affine.pro`) or a **custom** self-hosted URL (no trailing slash).
 - Save server from the sidebar. Sign out first if you need to switch instances.
-- Sign in with an **access token**, or **email and password**. Password is used once to mint a named token and is not stored.
+- Sign in with an **access token**, or **email and password**. The password is never stored. If the server offers access tokens, sign-in creates one named "VS Code · AFFiNE"; current AFFiNE servers do not, so the session cookie is used and you may need to sign in again when it expires. Sign-in errors say whether the credentials, the rate limit or the server failed.
 - Sign out from the sidebar, the Pages / AFFiNE toolbar, or the command palette.
 - Status bar shows the signed-in **name** (not email), or a prompt to sign in.
 - Access tokens live in editor **Secret Storage**, never in `settings.json`.

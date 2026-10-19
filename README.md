@@ -50,7 +50,7 @@ Full catalog (including preview coverage and non-goals): **[FEATURES.md](./FEATU
 ### Connect
 
 - AFFiNE Cloud (`https://app.affine.pro`) or any custom self-hosted URL
-- Sign in with an access token, or email and password (password is used once to mint a token and is not stored)
+- Sign in with an access token, or email and password (the password is never stored; current AFFiNE servers use a session cookie instead of a token)
 - Sign out from the sidebar, Pages toolbar, or command palette
 - Status bar shows the signed-in **name** (not email), or a sign-in prompt
 - Works with VS Code and Cursor 1.90+
