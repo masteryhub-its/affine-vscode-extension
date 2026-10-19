@@ -1,5 +1,7 @@
 import { FETCH_TIMEOUT_MS } from '../constants';
+import { AffineError, AffineErrorCode } from '../errors/affine-error';
 import type { HttpClient, HttpMethod, HttpRequest, HttpResponse } from './http.types';
+import { describeNetworkFailure } from './network-error';
 
 function readSetCookie(headers: Headers): readonly string[] {
   if ('getSetCookie' in headers && typeof headers.getSetCookie === 'function') {
@@ -61,6 +63,6 @@ export const fetchHttpClient: HttpClient = async (request: HttpRequest): Promise
     if (isTimeoutError(error)) {
       return TIMEOUT_RESPONSE;
     }
-    throw error;
+    throw new AffineError(describeNetworkFailure(error, request.url, 'affine.serverUrl'), AffineErrorCode.HTTP_ERROR, { cause: error });
   }
 };

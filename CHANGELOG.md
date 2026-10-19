@@ -4,6 +4,7 @@
 
 Security and reliability fixes from a full audit. No new screens or commands.
 
+- A connection failure now says what happened (for example "Cannot reach <host>: the connection timed out. Check your network or VPN and the server URL setting.") instead of a bare "fetch failed"
 - Requests time out after 60 seconds instead of hanging the sidebar and page panels
 - A failed read of the folders document no longer creates a duplicate folder record when you move a page
 - Folder and page ordering uses valid fractional keys; keys from earlier versions are skipped safely instead of breaking the next insert

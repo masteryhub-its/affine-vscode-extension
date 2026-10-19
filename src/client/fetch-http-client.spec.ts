@@ -68,6 +68,22 @@ describe('fetchHttpClient', () => {
         headers: { 'Content-Type': 'application/json' },
         body: '{}',
       })
-    ).rejects.toThrow(/fetch failed/);
+    ).rejects.toThrow(/Cannot reach affine\.example/u);
+  });
+
+  it('keeps the original error as the cause', async () => {
+    const original = new TypeError('fetch failed');
+    globalThis.fetch = (): Promise<Response> => Promise.reject(original);
+    await expect(fetchHttpClient({ url: 'https://affine.example/graphql', method: HttpMethod.GET, headers: {} })).rejects.toMatchObject({ cause: original });
+  });
+
+  it('turns a bare "fetch failed" into a message that names the host and the cause', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = () => Promise.reject(Object.assign(new TypeError('fetch failed'), { cause: Object.assign(new Error('x'), { code: 'UND_ERR_CONNECT_TIMEOUT' }) }));
+    try {
+      await expect(fetchHttpClient({ url: 'https://affine.example/path?secret=1', method: HttpMethod.GET, headers: {} })).rejects.toThrow(/Cannot reach affine.example: the connection timed out/u);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });
