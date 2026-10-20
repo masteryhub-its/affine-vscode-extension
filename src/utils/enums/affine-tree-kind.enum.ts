@@ -3,4 +3,5 @@ export enum AffineTreeKind {
   FOLDER = 'folder',
   DOCUMENT = 'document',
   ACTION = 'action',
+  ERROR = 'error',
 }

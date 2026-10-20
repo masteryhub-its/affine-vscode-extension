@@ -1,4 +1,4 @@
-import { findPageTreeNode, pageTreeToExplorerNodes, SIGN_IN_TREE_NODE, toDocumentNode, toFolderNode, toWorkspaceNode } from './tree-model';
+import { findPageTreeNode, pageTreeToExplorerNodes, SIGN_IN_TREE_NODE, toDocumentNode, toFolderNode, toErrorNode, toWorkspaceNode } from './tree-model';
 import { AffineTreeKind } from '../utils/enums/affine-tree-kind.enum';
 import { PageTreeKind } from '../utils/enums/page-tree-kind.enum';
 import type { PageTreeNode } from '../yjs/page-tree';
@@ -69,5 +69,25 @@ describe('tree-model', () => {
       id: 'signIn',
       label: 'Sign in to AFFiNE',
     });
+  });
+});
+
+describe('toErrorNode', () => {
+  it('names the problem and keeps a short message as it is', () => {
+    expect(toErrorNode('Cannot reach host: the connection timed out.')).toEqual({ kind: AffineTreeKind.ERROR, label: 'Could not load pages', message: 'Cannot reach host: the connection timed out.' });
+  });
+
+  it('collapses line breaks and extra spaces', () => {
+    expect(toErrorNode('first line\n\n  second   line').message).toBe('first line second line');
+  });
+
+  it('shortens a very long message with an ellipsis', () => {
+    const message = toErrorNode('x'.repeat(500)).message;
+    expect(message.length).toBeLessThanOrEqual(160);
+    expect(message.endsWith('…')).toBe(true);
+  });
+
+  it('falls back to a generic message when there is nothing to show', () => {
+    expect(toErrorNode('   ').message).toBe('Something went wrong. Try again.');
   });
 });

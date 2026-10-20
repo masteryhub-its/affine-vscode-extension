@@ -35,7 +35,28 @@ export interface AffineTreeActionNode {
   readonly label: string;
 }
 
-export type AffineTreeNode = AffineTreeWorkspaceNode | AffineTreeFolderNode | AffineTreeDocumentNode | AffineTreeActionNode;
+export interface AffineTreeErrorNode {
+  readonly kind: AffineTreeKind.ERROR;
+  readonly label: string;
+  readonly message: string;
+}
+
+export type AffineTreeNode = AffineTreeWorkspaceNode | AffineTreeFolderNode | AffineTreeDocumentNode | AffineTreeActionNode | AffineTreeErrorNode;
+
+const MAX_ERROR_LENGTH = 160;
+
+function shortenMessage(message: string): string {
+  const flat = message.replace(/\s+/gu, ' ').trim();
+  if (flat.length === 0) {
+    return 'Something went wrong. Try again.';
+  }
+  return flat.length > MAX_ERROR_LENGTH ? `${flat.slice(0, MAX_ERROR_LENGTH - 1).trimEnd()}…` : flat;
+}
+
+/** A row that says why the tree is empty, instead of leaving the view blank. */
+export function toErrorNode(message: string): AffineTreeErrorNode {
+  return { kind: AffineTreeKind.ERROR, label: 'Could not load pages', message: shortenMessage(message) };
+}
 
 export const SIGN_IN_TREE_NODE: AffineTreeActionNode = {
   kind: AffineTreeKind.ACTION,

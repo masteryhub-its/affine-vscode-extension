@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import type { AuthService } from '../auth/auth-service';
 import { isNotSignedInError } from '../errors/affine-error';
-import { findPageTreeNode, pageTreeToExplorerNodes, toWorkspaceNode, type AffineTreeNode } from '../tree/tree-model';
+import { findPageTreeNode, pageTreeToExplorerNodes, toErrorNode, toWorkspaceNode, type AffineTreeNode } from '../tree/tree-model';
+import { formatAffineError } from '../errors/format-error';
 import { presentFolder, presentPage, presentWorkspace, type IconSpec } from '../tree/page-presentation';
 import { escapeMarkdown } from '../utils/markdown-escape';
 import { AffineTreeKind } from '../utils/enums/affine-tree-kind.enum';
@@ -9,7 +10,6 @@ import { documentTitle } from '../client/document-url';
 import type { CatalogPageTitle } from '../document/hover-title';
 import { PageTreeKind } from '../utils/enums/page-tree-kind.enum';
 import type { PageTreeNode } from '../yjs/page-tree';
-import { showAffineError } from './messages';
 
 export const AFFINE_TREE_VIEW_ID = 'affineExplorer';
 
@@ -69,6 +69,16 @@ export class AffineTreeProvider implements vscode.TreeDataProvider<AffineTreeNod
         command: 'affine.openSignIn',
         title: 'Sign in to AFFiNE',
       };
+      return item;
+    }
+
+    if (element.kind === AffineTreeKind.ERROR) {
+      const item = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.None);
+      item.contextValue = 'affineError';
+      item.description = element.message;
+      item.iconPath = new vscode.ThemeIcon('warning', new vscode.ThemeColor('list.warningForeground'));
+      item.tooltip = new vscode.MarkdownString(`${escapeMarkdown(element.message)}\n\nClick to try again.`);
+      item.command = { command: 'affine.refresh', title: 'Try again' };
       return item;
     }
 
@@ -147,9 +157,19 @@ export class AffineTreeProvider implements vscode.TreeDataProvider<AffineTreeNod
         return [];
       }
       if (element === undefined) {
-        showAffineError(error);
+        // Still signed in: show why the list is empty, with a way to try again, not the sign-in welcome.
+        setSignedIn(await this.hasCredential());
+        return [toErrorNode(formatAffineError(error))];
       }
       return [];
+    }
+  }
+
+  private async hasCredential(): Promise<boolean> {
+    try {
+      return (await this.auth.readCredential()) !== undefined;
+    } catch {
+      return true;
     }
   }
 
