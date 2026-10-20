@@ -1,4 +1,5 @@
 import { PageTreeKind } from '../utils/enums/page-tree-kind.enum';
+import { AFFINE_MARK_PATH } from '../utils/affine-logo';
 import { renderSidebarHtml } from './sidebar-html';
 import type { SidebarState } from './sidebar.types';
 import { SidebarStatus } from '../utils/enums/sidebar-status.enum';
@@ -25,7 +26,7 @@ describe('renderSidebarHtml', () => {
     expect(html).toContain('id="force-reload"');
     expect(html).toContain('Force reload');
     expect(html).toContain('class="logo"');
-    expect(html).toContain('M12 2L22 21H2z');
+    expect(html).toContain(AFFINE_MARK_PATH);
     expect(html).toContain(`nonce-${nonce}`);
   });
 

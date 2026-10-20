@@ -1,4 +1,5 @@
 import { escapeHtml } from '../sidebar/escape-html';
+import { affineMarkSvg } from '../utils/affine-logo';
 import { MarketplaceShotName } from '../utils/enums/marketplace-shot-name.enum';
 import { SCREENSHOT_HOVER_DOC_ID } from './screenshot-fixtures';
 import { VSCODE_DARK_THEME_CSS } from './screenshot-theme';
@@ -31,7 +32,7 @@ function parseWebview(html: string): ParsedWebview {
 }
 
 function activityIcon(): string {
-  return `<svg class="activity-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L22 21H2z"/></svg>`;
+  return affineMarkSvg('activity-logo');
 }
 
 function editorPlaceholder(): string {

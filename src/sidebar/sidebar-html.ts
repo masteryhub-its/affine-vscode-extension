@@ -5,12 +5,11 @@ import { SidebarMessageType } from '../utils/enums/sidebar-message-type.enum';
 import { SidebarStatus } from '../utils/enums/sidebar-status.enum';
 import { cspImgSrc } from '../utils/url-protocol';
 import type { PageTreeNode } from '../yjs/page-tree';
+import { affineMarkSvg } from '../utils/affine-logo';
 import { escapeHtml } from './escape-html';
 import type { SidebarDocument, SidebarHtmlInput, SignedInSidebarState, SignedOutSidebarState } from './sidebar.types';
 
-const AFFINE_LOGO_SVG = `<svg class="logo" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-  <path d="M12 2L22 21H2z"/>
-</svg>`;
+const AFFINE_LOGO_SVG = affineMarkSvg('logo');
 
 export function renderSidebarHtml(input: SidebarHtmlInput): string {
   const { state, nonce, cspSource } = input;
