@@ -17,6 +17,21 @@ This client talks to **self-hosted AFFiNE** or **AFFiNE Cloud** over GraphQL, RE
 - Works on **VS Code and Cursor 1.90+**.
 - If `affine.clientVersion` is below `0.26.0`, the **AFFiNE** output channel warns that create, rename, and restore will not work.
 
+## Pages tree (what you see first)
+
+- Workspace rows show the page count, folders show how many items they hold, and page rows show their tags and sub-page count; favorites get a coloured star
+- Title-bar icons: search, new page, new folder. The **...** menu holds Sync, Force reload, Restore from trash, Set server URL and Sign out
+- Signed out, the view shows a welcome with **Sign in** and **Choose server**
+- The previous webview panel is hidden; turn on `affine.ui.legacySidebar` to bring it back
+- Every colour comes from the editor theme, including high contrast themes
+
+## Page preview layout
+
+- A top bar with a Read-only marker, **Copy link** and **Open in AFFiNE**
+- An "On this page" outline for pages with two or more headings
+- To-do items keep the checkbox on the same row as the text and strike through done items; numbered lists count 1, 2, 3
+- Code blocks show their language and have a Copy button
+
 ## Sidebar (AFFiNE view)
 
 - Signed-in **name, email, avatar**, server URL (Global only), and last-synced time.

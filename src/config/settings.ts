@@ -58,6 +58,16 @@ export function normalizeServerUrl(raw: string): string {
   return `${parsed.origin}${normalizedPath}`;
 }
 
+/** The text to show beside an input box when a server URL is not acceptable, or undefined when it is fine. */
+export function validateServerUrlInput(raw: string): string | undefined {
+  try {
+    normalizeServerUrl(raw);
+    return undefined;
+  } catch (error: unknown) {
+    return error instanceof Error ? error.message : 'Server URL is invalid';
+  }
+}
+
 export function normalizeOptionalId(raw: string): string | undefined {
   const trimmed = raw.trim();
   return trimmed.length === 0 ? undefined : trimmed;

@@ -50,7 +50,7 @@ describe('renderPageHtml', () => {
     });
 
     expect(html).toContain('<h1>Standup</h1>');
-    expect(html).toContain('<h2>');
+    expect(html).toContain('<h2 id="h-0">');
     expect(html).toContain('Goals');
     expect(html).toContain('<strong>today</strong>');
     expect(html).toContain('One');
@@ -296,5 +296,74 @@ describe('renderPageHtml', () => {
     expect(html).toContain('class="page-tags"');
     expect(html).toContain('docs');
     expect(html).toContain('api');
+  });
+
+  describe('layout', () => {
+    const plain = { bold: false, italic: false, strike: false, underline: false, code: false, link: undefined, mentionUserId: undefined, linkedDocId: undefined };
+    const text = (value: string): ParsedPage['blocks'][number] => ({ kind: PageBlockKind.PARAGRAPH, inlines: [{ text: value, ...plain }] });
+    const heading = (level: 1 | 2 | 3, value: string): ParsedPage['blocks'][number] => ({ kind: PageBlockKind.HEADING, level, inlines: [{ text: value, ...plain }] });
+    const listItem = (list: PageListKind, value: string, checked = false, depth = 0): ParsedPage['blocks'][number] => ({
+      kind: PageBlockKind.LIST,
+      list,
+      checked,
+      depth,
+      inlines: [{ text: value, ...plain }],
+    });
+    const render = (blocks: ParsedPage['blocks']): string => renderPageHtml({ page: page({ title: 'Handbook', blocks }), fallbackTitle: 'Handbook', url, nonce, cspSource });
+
+    it('puts a read-only marker and the actions in a top bar', () => {
+      const html = render([text('x')]);
+      expect(html).toContain('class="topbar"');
+      expect(html).toContain('Read-only');
+      expect(html).toContain('data-message="copyLink"');
+      expect(html).toContain('id="open-external"');
+    });
+
+    it('adds an outline for a page with several headings, linked to ids on the headings', () => {
+      const html = render([heading(2, 'Goals'), text('a'), heading(2, 'Rollout')]);
+      expect(html).toContain('aria-label="On this page"');
+      expect(html).toContain('data-target="h-0"');
+      expect(html).toContain('data-target="h-2"');
+      expect(html).toContain('<h2 id="h-0">');
+      expect(html).toContain('<h2 id="h-2">');
+    });
+
+    it('leaves the outline out when there is nothing to navigate', () => {
+      expect(render([heading(2, 'Only one'), text('a')])).not.toContain('On this page');
+      expect(render([text('no headings')])).not.toContain('On this page');
+    });
+
+    it('numbers a numbered list 1, 2, 3 instead of 1 every time', () => {
+      const html = render([listItem(PageListKind.NUMBERED, 'a'), listItem(PageListKind.NUMBERED, 'b'), listItem(PageListKind.NUMBERED, 'c')]);
+      expect(html).toContain('>1.<');
+      expect(html).toContain('>2.<');
+      expect(html).toContain('>3.<');
+    });
+
+    it('keeps a to-do checkbox on the same row as its text, with the right state for assistive technology', () => {
+      const html = render([listItem(PageListKind.TODO, 'Draft outline', true), listItem(PageListKind.TODO, 'Review it', false)]);
+      expect(html).toContain('role="checkbox" aria-checked="true"');
+      expect(html).toContain('role="checkbox" aria-checked="false"');
+      expect(html).toContain('class="todo done"');
+      expect(html).toContain('<span class="li-text">Draft outline</span>');
+      expect(html).not.toContain('<input');
+    });
+
+    it('wraps code in a block that names the language and offers a copy button', () => {
+      const html = render([{ kind: PageBlockKind.CODE, language: 'ts', text: 'const a = 1;' }]);
+      expect(html).toContain('class="code-block"');
+      expect(html).toContain('class="code-head"');
+      expect(html).toContain('>ts<');
+      expect(html).toContain('data-copy-code');
+    });
+
+    it('does not offer a language label for plain text code', () => {
+      const html = render([{ kind: PageBlockKind.CODE, language: '', text: 'x' }]);
+      expect(html).toContain('>text<');
+    });
+
+    it('uses no hard-coded hex colours in the markup', () => {
+      expect(render([heading(2, 'A'), text('b'), heading(2, 'C')])).not.toMatch(/#[0-9a-fA-F]{6}\b/u);
+    });
   });
 });

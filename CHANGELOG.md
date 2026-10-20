@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0 — Unreleased
+
+Redesigned interface. Everything from 1.0.1 is included.
+
+- Pages tree: tags, sub-page counts, folder and workspace counts, coloured favorites
+- Welcome view for signing in and choosing a server; the always-visible account and server cards are gone (`affine.ui.legacySidebar` restores them)
+- Title bar trimmed to search, new page and new folder; the rest is under the **...** menu, including a new **Set AFFiNE Server URL** command
+- Page preview rebuilt: top bar, an outline panel, inline to-do items, correctly numbered lists, code blocks with a language label and Copy button, consistent tables, callouts and cards
+- Highlight and text colours in pages now follow the editor theme
+- One theme stylesheet built only from editor theme colours, with high contrast support
+
 ## 1.0.1 — 2026-10-19
 
 Security and reliability fixes from a full audit. No new screens or commands.

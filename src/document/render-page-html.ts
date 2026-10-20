@@ -5,6 +5,9 @@ import { PageBlockKind } from '../utils/enums/page-block-kind.enum';
 import { PageListKind } from '../utils/enums/page-list-kind.enum';
 import { DocumentPanelMessageType } from '../utils/enums/document-panel-message-type.enum';
 import { cspImgSrc } from '../utils/url-protocol';
+import { renderDocumentShell } from '../ui/document-shell';
+import { numberListItems } from './list-numbering';
+import { extractOutline, headingAnchorId } from './outline';
 import type { PageBlock, PageInlineSpan, ParsedPage } from '../yjs/parse-page-doc';
 
 export interface RenderPageHtmlInput {
@@ -80,25 +83,42 @@ function renderInlines(inlines: readonly PageInlineSpan[], people: MentionPeople
     .join('');
 }
 
-function renderBlock(block: PageBlock, people: MentionPeople, pageUrl: string, serverUrl: string): string {
+interface BlockContext {
+  readonly index: number;
+  readonly number: number | undefined;
+  readonly people: MentionPeople;
+  readonly pageUrl: string;
+  readonly serverUrl: string;
+}
+
+function checkboxIcon(checked: boolean): string {
+  const box = '<rect x="2.5" y="2.5" width="11" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/>';
+  const tick = '<path d="m5.2 8.2 2 2 3.6-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
+  return `<svg class="icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">${box}${checked ? tick : ''}</svg>`;
+}
+
+function renderBlock(block: PageBlock, context: BlockContext): string {
+  const { people, pageUrl, serverUrl } = context;
   switch (block.kind) {
     case PageBlockKind.HEADING:
-      return `<h${block.level}>${renderInlines(block.inlines, people, pageUrl, serverUrl)}</h${block.level}>`;
+      return `<h${block.level} id="${headingAnchorId(context.index)}">${renderInlines(block.inlines, people, pageUrl, serverUrl)}</h${block.level}>`;
     case PageBlockKind.PARAGRAPH:
       return `<p>${renderInlines(block.inlines, people, pageUrl, serverUrl)}</p>`;
     case PageBlockKind.QUOTE:
       return `<blockquote>${renderInlines(block.inlines, people, pageUrl, serverUrl)}</blockquote>`;
     case PageBlockKind.LIST: {
-      const indent = ` style="margin-left:${block.depth * 16}px"`;
+      const indent = ` style="margin-left:${block.depth * 20}px"`;
+      const inner = renderInlines(block.inlines, people, pageUrl, serverUrl);
       if (block.list === PageListKind.TODO) {
-        const checked = block.checked ? 'checked' : '';
-        return `<div class="todo"${indent}><input type="checkbox" disabled ${checked} /> ${renderInlines(block.inlines, people, pageUrl, serverUrl)}</div>`;
+        return `<div class="todo${block.checked ? ' done' : ''}" role="checkbox" aria-checked="${block.checked ? 'true' : 'false'}" aria-disabled="true"${indent}><span class="check" aria-hidden="true">${checkboxIcon(block.checked)}</span><span class="li-text">${inner}</span></div>`;
       }
-      const mark = block.list === PageListKind.NUMBERED ? '1.' : '•';
-      return `<div class="item"${indent}><span class="mark">${mark}</span> ${renderInlines(block.inlines, people, pageUrl, serverUrl)}</div>`;
+      const mark = block.list === PageListKind.NUMBERED ? `${context.number ?? 1}.` : '•';
+      return `<div class="item"${indent}><span class="mark">${mark}</span><span class="li-text">${inner}</span></div>`;
     }
-    case PageBlockKind.CODE:
-      return `<pre><code class="lang-${escapeHtml(block.language)}">${escapeHtml(block.text)}</code></pre>`;
+    case PageBlockKind.CODE: {
+      const language = block.language.trim().length > 0 ? block.language.trim() : 'text';
+      return `<div class="code-block"><div class="code-head"><span>${escapeHtml(language)}</span><button type="button" class="btn ghost" data-copy-code>Copy</button></div><pre><code class="lang-${escapeHtml(block.language)}">${escapeHtml(block.text)}</code></pre></div>`;
+    }
     case PageBlockKind.DIVIDER:
       return '<hr />';
     case PageBlockKind.BOOKMARK: {
@@ -174,7 +194,17 @@ function renderBody(page: ParsedPage, people: MentionPeople, pageUrl: string, se
   if (page.blocks.length === 0) {
     return '<p class="muted">This page is empty.</p>';
   }
-  return page.blocks.map((block) => renderBlock(block, people, pageUrl, serverUrl)).join('\n');
+  const numbers = numberListItems(page.blocks);
+  return page.blocks.map((block, index) => renderBlock(block, { index, number: numbers[index], people, pageUrl, serverUrl })).join('\n');
+}
+
+function renderOutline(page: ParsedPage): string {
+  const items = page.edgelessOnly ? [] : extractOutline(page.blocks);
+  if (items.length < 2) {
+    return '';
+  }
+  const links = items.map((item) => `<button type="button" class="outline-item level-${item.level}" data-target="${escapeHtml(item.anchor)}">${escapeHtml(item.text)}</button>`).join('');
+  return `<nav class="outline" aria-label="On this page"><p class="outline-title">On this page</p>${links}</nav>`;
 }
 
 export interface RenderPageShellInput {
@@ -184,68 +214,106 @@ export interface RenderPageShellInput {
   readonly serverUrl: string;
   readonly body: string;
   readonly showOpen: boolean;
+  /** The "On this page" panel, or empty when the page has too few headings to need one. */
+  readonly outline?: string;
 }
 
-function renderShell(input: RenderPageShellInput): string {
-  const button = input.showOpen ? '<button type="button" id="open-external">Open in AFFiNE</button>' : '';
-  const serverOrigin = cspImgSrc(input.serverUrl);
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${input.cspSource} ${serverOrigin} data:; style-src ${input.cspSource} 'unsafe-inline'; script-src 'nonce-${input.nonce}';" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${escapeHtml(input.title)}</title>
-  <style>
-    :root { color-scheme: light dark; }
-    body { font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); color: var(--vscode-foreground); background: var(--vscode-editor-background); margin: 0; }
-    .bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--vscode-widget-border, transparent); }
-    .bar button { padding: 6px 12px; border: none; border-radius: 4px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); cursor: pointer; }
-    article { max-width: 52rem; padding: 24px 20px 48px; line-height: 1.55; }
-    h1 { font-size: 28px; margin: 0 0 16px; }
-    h2, h3, h4, h5, h6 { margin: 20px 0 8px; }
-    p, blockquote, pre, .item, .todo { margin: 0 0 10px; }
-    blockquote { border-left: 3px solid var(--vscode-button-background); padding: 0 12px; color: var(--vscode-descriptionForeground); }
-    pre { background: var(--vscode-textCodeBlock-background, var(--vscode-editorWidget-background)); padding: 12px; border-radius: 6px; overflow: auto; }
-    code { font-family: var(--vscode-editor-font-family); font-size: 0.92em; }
-    .muted { color: var(--vscode-descriptionForeground); }
-    .mark { opacity: 0.6; display: inline-block; min-width: 1.2em; }
-    hr { border: none; border-top: 1px solid var(--vscode-widget-border, var(--vscode-foreground)); opacity: 0.3; margin: 16px 0; }
-    a { color: var(--vscode-textLink-foreground); cursor: pointer; text-decoration: underline; }
-    .authors { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 16px; color: var(--vscode-descriptionForeground); font-size: 12px; }
-    .author { display: inline-flex; align-items: center; gap: 6px; }
-    .author .avatar { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; }
-    .mention { display: inline-flex; align-items: center; gap: 4px; vertical-align: baseline; font-weight: 500; padding: 0 4px; border-radius: 4px; text-decoration: none; cursor: pointer; }
-    .mention .avatar { width: 16px; height: 16px; border-radius: 50%; object-fit: cover; }
-    p .linked-doc { display: inline; border: none; padding: 0 4px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); border-radius: 4px; text-decoration: none; }
-    .linked-doc { border: 1px solid var(--vscode-widget-border, transparent); border-radius: 6px; padding: 8px 12px; background: var(--vscode-editorWidget-background); text-decoration: none; cursor: pointer; color: inherit; display: inline-block; }
-    .preview-table { border-collapse: collapse; margin: 0 0 12px; width: 100%; }
-    .preview-table td { border: 1px solid var(--vscode-widget-border, transparent); padding: 6px 8px; }
-    .callout { display: flex; gap: 8px; border-left: 3px solid var(--vscode-button-background); padding: 8px 12px; margin: 0 0 12px; background: var(--vscode-editorWidget-background); }
-    .callout-emoji { flex: none; }
-    figure.image { margin: 0 0 12px; }
-    figure.image img { max-width: 100%; height: auto; }
-    .attachment { margin: 0 0 10px; }
-    .page-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
-    .page-tag { font-size: 11px; padding: 1px 8px; border-radius: 10px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
-    mark.highlight { background: #fff59d; color: inherit; padding: 0 2px; border-radius: 2px; }
-  </style>
-</head>
-<body>
-  <div class="bar">
-    <span class="muted">Read-only preview</span>
-    ${button}
-  </div>
-  <article>
-    ${input.body}
-  </article>
-  <script nonce="${input.nonce}">
+const PAGE_CSS = String.raw`
+a { cursor: pointer; text-decoration: underline; }
+.topbar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 8px 28px; background: var(--vscode-editor-background); border-bottom: 1px solid var(--line); }
+.topbar .actions { margin-bottom: 0; }
+.topbar .chip { --chip: var(--subtle); --chip-fg: var(--muted); font-weight: 500; }
+.page-body { padding: 20px 28px 56px; }
+.doc-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 36px; align-items: start; }
+.doc-layout.no-outline { grid-template-columns: minmax(0, 1fr); }
+.doc-layout > * { min-width: 0; }
+.outline { position: sticky; top: 56px; display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+.outline-title { margin-bottom: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.outline-item { display: block; width: 100%; padding: 3px 8px; text-align: left; font: inherit; color: var(--muted); background: transparent; border: 0; border-left: 2px solid var(--line); cursor: pointer; overflow-wrap: anywhere; }
+.outline-item:hover { color: var(--vscode-foreground); background: var(--subtle); }
+.outline-item.level-3 { padding-left: 18px; }
+article.doc { max-width: 720px; line-height: 1.6; }
+article.doc > h1 { margin: 0 0 12px; font-size: 2em; line-height: 1.2; font-weight: 700; overflow-wrap: anywhere; }
+article.doc h2 { margin: 28px 0 8px; font-size: 1.45em; font-weight: 600; }
+article.doc h3 { margin: 22px 0 6px; font-size: 1.2em; font-weight: 600; }
+article.doc h4, article.doc h5, article.doc h6 { margin: 18px 0 6px; font-size: 1em; font-weight: 600; }
+article.doc p, article.doc blockquote, article.doc .item, article.doc .todo { margin: 0 0 8px; }
+blockquote { margin-left: 0; padding: 0 12px; border-left: 3px solid var(--vscode-textBlockQuote-border); color: var(--muted); }
+code { font-family: var(--vscode-editor-font-family); font-size: 0.92em; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 20px 0; }
+.item, .todo { display: flex; align-items: baseline; gap: 8px; }
+.mark { flex: none; min-width: 1.4em; text-align: right; color: var(--muted); }
+.check { flex: none; display: inline-flex; align-self: flex-start; padding-top: 3px; color: var(--vscode-foreground); }
+.todo.done .li-text { color: var(--muted); text-decoration: line-through; }
+.li-text { min-width: 0; overflow-wrap: anywhere; }
+.code-block { margin: 0 0 14px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--vscode-textCodeBlock-background); }
+.code-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 6px 2px 12px; font-family: var(--vscode-editor-font-family); font-size: 11px; color: var(--muted); border-bottom: 1px solid var(--line); }
+.code-head .btn { padding: 0 6px; font-size: 11px; }
+.code-block pre { margin: 0; padding: 10px 12px; overflow: auto; }
+.authors { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 20px; color: var(--muted); font-size: 12px; }
+.author { display: inline-flex; align-items: center; gap: 6px; }
+.author .avatar, .mention .avatar { object-fit: cover; }
+.author .avatar { width: 18px; height: 18px; }
+.mention { display: inline-flex; align-items: center; gap: 4px; padding: 0 4px; border-radius: 4px; font-weight: 500; text-decoration: none; vertical-align: baseline; }
+.mention .avatar { width: 16px; height: 16px; }
+p .linked-doc { display: inline; border: 0; padding: 0 4px; border-radius: 4px; color: var(--vscode-badge-foreground); background: var(--vscode-badge-background); text-decoration: none; }
+.linked-doc, .bookmark a, .attachment a { text-decoration: none; }
+p:has(> .linked-doc:only-child), p.bookmark, p.attachment { display: block; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); }
+.preview-table { width: 100%; margin: 4px 0 14px; border-collapse: collapse; }
+.preview-table td { padding: 6px 10px; border: 1px solid var(--line); }
+.preview-table tr:first-child td { font-weight: 600; background: var(--subtle); }
+.callout { display: flex; gap: 10px; margin: 0 0 12px; padding: 10px 14px; border-radius: var(--radius); background: var(--subtle); }
+.callout-emoji { flex: none; }
+figure.image { margin: 0 0 14px; }
+figure.image img { max-width: 100%; height: auto; border-radius: var(--radius); }
+figure.image figcaption { margin-top: 4px; font-size: 12px; color: var(--muted); }
+.page-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.page-tag { padding: 1px 8px; border-radius: 10px; font-size: 11px; color: var(--vscode-badge-foreground); background: var(--vscode-badge-background); }
+mark.highlight { padding: 0 2px; border-radius: 2px; color: inherit; }
+:root {
+  --affine-text-highlight-red: color-mix(in srgb, var(--vscode-charts-red) 30%, transparent);
+  --affine-text-highlight-orange: color-mix(in srgb, var(--vscode-charts-orange) 30%, transparent);
+  --affine-text-highlight-yellow: color-mix(in srgb, var(--vscode-charts-yellow) 35%, transparent);
+  --affine-text-highlight-green: color-mix(in srgb, var(--vscode-charts-green) 30%, transparent);
+  --affine-text-highlight-teal: color-mix(in srgb, var(--vscode-terminal-ansiCyan) 30%, transparent);
+  --affine-text-highlight-blue: color-mix(in srgb, var(--vscode-charts-blue) 30%, transparent);
+  --affine-text-highlight-purple: color-mix(in srgb, var(--vscode-charts-purple) 30%, transparent);
+  --affine-text-highlight-grey: color-mix(in srgb, var(--vscode-descriptionForeground) 30%, transparent);
+  --affine-text-color-red: var(--vscode-charts-red);
+  --affine-text-color-orange: var(--vscode-charts-orange);
+  --affine-text-color-yellow: var(--vscode-charts-yellow);
+  --affine-text-color-green: var(--vscode-charts-green);
+  --affine-text-color-teal: var(--vscode-terminal-ansiCyan);
+  --affine-text-color-blue: var(--vscode-charts-blue);
+  --affine-text-color-purple: var(--vscode-charts-purple);
+  --affine-text-color-grey: var(--vscode-descriptionForeground);
+}
+@media (max-width: 860px) {
+  .doc-layout { grid-template-columns: minmax(0, 1fr); }
+  .outline { position: static; }
+  .topbar, .page-body { padding-left: 14px; padding-right: 14px; }
+}
+`;
+
+const SCRIPT = `
     const vscode = acquireVsCodeApi();
-    const open = () => vscode.postMessage({ type: '${DocumentPanelMessageType.OPEN_EXTERNAL}' });
-    const openBtn = document.getElementById('open-external');
-    if (openBtn) {
-      openBtn.addEventListener('click', open);
-    }
+    const post = (message) => vscode.postMessage(message);
+    document.getElementById('open-external')?.addEventListener('click', () => post({ type: '${DocumentPanelMessageType.OPEN_EXTERNAL}' }));
+    document.querySelectorAll('[data-message]').forEach((button) => {
+      button.addEventListener('click', () => post({ type: button.getAttribute('data-message') }));
+    });
+    document.querySelectorAll('[data-copy-code]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const code = button.closest('.code-block')?.querySelector('code');
+        if (code) post({ type: '${DocumentPanelMessageType.COPY_TEXT}', text: code.textContent || '' });
+      });
+    });
+    document.querySelectorAll('.outline-item').forEach((button) => {
+      button.addEventListener('click', () => {
+        const target = document.getElementById(button.getAttribute('data-target') || '');
+        if (target) target.scrollIntoView({ block: 'start' });
+      });
+    });
     document.addEventListener('click', (event) => {
       const target = event.target;
       if (!(target instanceof Element)) {
@@ -256,11 +324,33 @@ function renderShell(input: RenderPageShellInput): string {
         return;
       }
       event.preventDefault();
-      vscode.postMessage({ type: '${DocumentPanelMessageType.OPEN_HREF}', href: link.getAttribute('href') });
-    });
-  </script>
-</body>
-</html>`;
+      post({ type: '${DocumentPanelMessageType.OPEN_HREF}', href: link.getAttribute('href') });
+    });`;
+
+function renderShell(input: RenderPageShellInput): string {
+  const actions = input.showOpen
+    ? `<div class="actions" role="toolbar" aria-label="Page actions"><span class="chip">Read-only</span><button type="button" class="btn ghost" data-message="${DocumentPanelMessageType.COPY_LINK}">Copy link</button><button type="button" class="btn primary" id="open-external">Open in AFFiNE</button></div>`
+    : '<div class="actions"><span class="chip">Read-only</span></div>';
+  const outline = input.outline ?? '';
+  const layoutClass = outline.length > 0 ? 'doc-layout' : 'doc-layout no-outline';
+  const body = `<header class="topbar"><span class="muted">Preview</span>${actions}</header>
+<div class="page-body">
+  <div class="${layoutClass}">
+    ${outline}
+    <article class="doc">
+      ${input.body}
+    </article>
+  </div>
+</div>`;
+  return renderDocumentShell({
+    title: input.title,
+    nonce: input.nonce,
+    cspSource: input.cspSource,
+    imageSources: [cspImgSrc(input.serverUrl), 'data:'],
+    body,
+    script: SCRIPT,
+    extraCss: PAGE_CSS,
+  });
 }
 
 export interface RenderPageStatusInput {
@@ -319,6 +409,7 @@ export function renderPageHtml(input: RenderPageHtmlInput): string {
     cspSource: input.cspSource,
     serverUrl,
     showOpen: true,
+    outline: renderOutline(input.page),
     body: `<h1>${escapeHtml(title)}</h1>
     ${renderTags(input.tags)}
     ${renderAuthors(input.createdBy, input.updatedBy)}

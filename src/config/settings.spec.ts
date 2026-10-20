@@ -1,5 +1,5 @@
 import { AffineError } from '../errors/affine-error';
-import { normalizeClientVersion, normalizeOpenMode, normalizeOptionalId, normalizeServerUrl, normalizeSettings, preferredServerUrlRaw } from './settings';
+import { normalizeClientVersion, normalizeOpenMode, normalizeOptionalId, normalizeServerUrl, normalizeSettings, preferredServerUrlRaw, validateServerUrlInput } from './settings';
 import { OpenMode } from '../utils/enums/open-mode.enum';
 
 describe('normalizeServerUrl', () => {
@@ -122,5 +122,22 @@ describe('normalizeSettings', () => {
       openMode: OpenMode.EXTERNAL,
       clientVersion: '0.26.0',
     });
+  });
+});
+
+describe('validateServerUrlInput', () => {
+  it('accepts an https URL and loopback http', () => {
+    expect(validateServerUrlInput('https://affine.example.com')).toBeUndefined();
+    expect(validateServerUrlInput('http://localhost:3010')).toBeUndefined();
+  });
+
+  it.each([
+    ['', 'required'],
+    ['affine.example.com', 'invalid'],
+    ['http://affine.example.com', 'https'],
+    ['https://user:pass@affine.example.com', 'credentials'],
+    ['ftp://affine.example.com', 'http or https'],
+  ])('explains why %j is rejected', (value, fragment) => {
+    expect(validateServerUrlInput(value)).toContain(fragment);
   });
 });

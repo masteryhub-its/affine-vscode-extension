@@ -2,7 +2,7 @@
   "name": "affine",
   "displayName": "AFFiNE by MasteryHub",
   "description": "MasteryHub ITS client for AFFiNE — browse, preview, and organize self-hosted or Cloud pages inside VS Code and Cursor.",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "publisher": "MasteryHubITS",
   "license": "MIT",
   "author": "MasteryHub ITS",
@@ -77,6 +77,11 @@
           "type": "string",
           "default": "0.26.0",
           "description": "Value of the x-affine-client-version request header. Must be >= 0.26.0 so websocket sync (move and trash) is accepted."
+        },
+        "affine.ui.legacySidebar": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show the previous webview panel (account, server and recent-pages cards) above the Pages tree. Off by default: the Pages tree now has the sign-in, search and server actions in its title bar."
         }
       }
     },
@@ -156,6 +161,11 @@
       {
         "command": "affine.openLink",
         "title": "Open AFFiNE Link"
+      },
+      {
+        "command": "affine.setServerUrl",
+        "title": "Set AFFiNE Server URL",
+        "icon": "$(server)"
       }
     ],
     "menus": {
@@ -180,28 +190,68 @@
       "view/title": [
         {
           "command": "affine.search",
-          "when": "view == affinePanel || view == affineExplorer",
+          "when": "view == affinePanel",
           "group": "navigation@0"
         },
         {
           "command": "affine.createPage",
-          "when": "view == affinePanel || view == affineExplorer",
+          "when": "view == affinePanel",
           "group": "navigation@1"
         },
         {
           "command": "affine.forceReload",
-          "when": "view == affinePanel || view == affineExplorer",
+          "when": "view == affinePanel",
           "group": "navigation@2"
         },
         {
           "command": "affine.refresh",
-          "when": "view == affinePanel || view == affineExplorer",
+          "when": "view == affinePanel",
           "group": "navigation@3"
         },
         {
           "command": "affine.signOut",
-          "when": "(view == affinePanel || view == affineExplorer) && affine.signedIn",
+          "when": "(view == affinePanel) && affine.signedIn",
           "group": "navigation@4"
+        },
+        {
+          "command": "affine.search",
+          "when": "view == affineExplorer",
+          "group": "navigation@0"
+        },
+        {
+          "command": "affine.createPage",
+          "when": "view == affineExplorer && affine.signedIn",
+          "group": "navigation@1"
+        },
+        {
+          "command": "affine.createFolder",
+          "when": "view == affineExplorer && affine.signedIn",
+          "group": "navigation@2"
+        },
+        {
+          "command": "affine.refresh",
+          "when": "view == affineExplorer",
+          "group": "1_more@1"
+        },
+        {
+          "command": "affine.forceReload",
+          "when": "view == affineExplorer",
+          "group": "1_more@2"
+        },
+        {
+          "command": "affine.restoreDocument",
+          "when": "view == affineExplorer && affine.signedIn",
+          "group": "1_more@3"
+        },
+        {
+          "command": "affine.setServerUrl",
+          "when": "view == affineExplorer",
+          "group": "1_more@4"
+        },
+        {
+          "command": "affine.signOut",
+          "when": "view == affineExplorer && affine.signedIn",
+          "group": "1_more@5"
         }
       ],
       "view/item/context": [
@@ -240,7 +290,8 @@
           "type": "webview",
           "id": "affinePanel",
           "name": "AFFiNE",
-          "visibility": "visible"
+          "visibility": "visible",
+          "when": "config.affine.ui.legacySidebar"
         },
         {
           "id": "affineExplorer",
@@ -248,7 +299,14 @@
           "visibility": "visible"
         }
       ]
-    }
+    },
+    "viewsWelcome": [
+      {
+        "view": "affineExplorer",
+        "contents": "Sign in to browse and preview your AFFiNE pages beside your code.\n[Sign in](command:affine.openSignIn)\n[Choose server](command:affine.setServerUrl)\nYour credentials stay in the editor's secret storage and are only sent to the server you choose.",
+        "when": "!affine.signedIn"
+      }
+    ]
   },
   "scripts": {
     "compile": "rm -rf dist && esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",

@@ -8,6 +8,8 @@ import { formatAffineError } from '../errors/format-error';
 import { DocumentPanelMessageType } from '../utils/enums/document-panel-message-type.enum';
 import { parseDocumentPanelMessageType } from '../utils/document-panel-message-type';
 import { isAllowedHttpUrl } from '../utils/allowed-http-url';
+import { copyActionFromMessage } from '../document/copy-message';
+import { showAffineInfo } from './messages';
 import { openAffineUrl } from './open-url';
 
 export interface OpenAffineDocumentInput {
@@ -51,6 +53,13 @@ export async function openAffineDocumentPanel(input: OpenAffineDocumentInput): P
     }
     if (isOpenExternalMessage(message)) {
       void openAffineUrl(url);
+      return;
+    }
+    const copy = copyActionFromMessage(message, url);
+    if (copy !== undefined) {
+      void vscode.env.clipboard.writeText(copy.text).then(() => {
+        showAffineInfo(copy.confirmation);
+      });
     }
   });
   try {

@@ -5,8 +5,8 @@ import { clientVersionGuardMessage } from '../config/client-version';
 import { detectAffinePageUrls } from '../document/detect-links';
 import { hoverTitleForAffinePage } from '../document/hover-title';
 import { isNotSignedInError } from '../errors/affine-error';
-import { openDocumentCommand, registerAffineCommands, type AffineCommandContext, type OpenDocumentPreviewInput } from './commands';
-import { openAffineDocumentPanel } from './document-panel';
+import { openDocumentCommand, registerAffineCommands, setServerUrlCommand, signInCommand, signOutCommand, type AffineCommandContext, type OpenDocumentPreviewInput } from './commands';
+import { closeAffineDocumentPanels, openAffineDocumentPanel } from './document-panel';
 import { showAffineError } from './messages';
 import { createFolderCommand, createPageCommand, deleteDocumentCommand, duplicateDocumentCommand, moveDocumentCommand, renameDocumentCommand, restoreDocumentCommand } from './organize-commands';
 import { VsCodeSecretStore } from './secret-store';
@@ -68,10 +68,12 @@ export function activateAffine(context: vscode.ExtensionContext): void {
 
   const commandCtx: AffineCommandContext = { auth, settings, tree, statusBar, openPreview };
 
+  const legacySidebar = (): boolean => vscode.workspace.getConfiguration('affine').get<boolean>('ui.legacySidebar') === true;
+
   const runCommand = (action: () => Promise<void>): void => {
     void action().catch((error: unknown) => {
       if (isNotSignedInError(error)) {
-        sidebar.openSignInUi();
+        void vscode.commands.executeCommand('affine.openSignIn');
         return;
       }
       showAffineError(error);
@@ -86,16 +88,44 @@ export function activateAffine(context: vscode.ExtensionContext): void {
       webviewOptions: { retainContextWhenHidden: true },
     }),
     vscode.commands.registerCommand('affine.openSignIn', () => {
-      sidebar.openSignInUi();
+      if (legacySidebar()) {
+        sidebar.openSignInUi();
+        return;
+      }
+      runCommand(async () => {
+        await signInCommand(commandCtx);
+      });
+    }),
+    vscode.commands.registerCommand('affine.setServerUrl', () => {
+      runCommand(async () => {
+        await setServerUrlCommand(commandCtx);
+      });
     }),
     vscode.commands.registerCommand('affine.refresh', () => {
-      sidebar.refresh();
+      tree.refresh();
+      void statusBar.refresh(auth);
+      if (legacySidebar()) {
+        sidebar.refresh();
+      }
     }),
     vscode.commands.registerCommand('affine.forceReload', () => {
-      void sidebar.forceReload();
+      catalogCache.invalidate();
+      void closeAffineDocumentPanels();
+      tree.refresh();
+      void statusBar.refresh(auth);
+      if (legacySidebar()) {
+        void sidebar.forceReload();
+      }
     }),
     vscode.commands.registerCommand('affine.signOut', () => {
-      void sidebar.signOut();
+      runCommand(async () => {
+        await closeAffineDocumentPanels();
+        if (legacySidebar()) {
+          await sidebar.signOut();
+          return;
+        }
+        await signOutCommand(commandCtx);
+      });
     }),
     vscode.commands.registerCommand('affine.openDocument', (node: unknown) => {
       runCommand(async () => {

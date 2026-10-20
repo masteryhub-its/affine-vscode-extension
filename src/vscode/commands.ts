@@ -3,7 +3,8 @@ import type { AuthService } from '../auth/auth-service';
 import { detectAffinePageUrls } from '../document/detect-links';
 import { buildDocumentUrl } from '../client/document-url';
 import type { AffineWorkspace } from '../client/affine.types';
-import type { SettingsReader } from '../config/settings.types';
+import { normalizeServerUrl, validateServerUrlInput } from '../config/settings';
+import type { SettingsStore } from '../config/settings.types';
 import { isNotSignedInError } from '../errors/affine-error';
 import { searchAllWorkspaces } from '../search/search-all-workspaces';
 import { resolveSearchWorkspaces } from '../search/resolve-workspaces';
@@ -35,7 +36,7 @@ export interface OpenDocumentPreviewInput {
 
 export interface AffineCommandContext {
   readonly auth: AuthService;
-  readonly settings: SettingsReader;
+  readonly settings: SettingsStore;
   readonly tree: AffineTreeProvider;
   readonly statusBar: AffineStatusBar;
   readonly openPreview: (input: OpenDocumentPreviewInput) => Promise<void>;
@@ -49,7 +50,7 @@ async function refreshUi(ctx: AffineCommandContext): Promise<void> {
 async function pickSignInMethod(): Promise<SignInMethod | undefined> {
   const items: readonly SignInMethodItem[] = [
     { label: 'Access token', description: 'Paste an AFFiNE access token', method: SignInMethod.TOKEN },
-    { label: 'Email and password', description: 'Mint a named token from your account password', method: SignInMethod.PASSWORD },
+    { label: 'Email and password', description: 'Sign in with your account; the password is never stored', method: SignInMethod.PASSWORD },
   ];
   const selected = await vscode.window.showQuickPick(items, { title: 'AFFiNE sign in', ignoreFocusOut: true });
   return selected?.method;
@@ -87,7 +88,7 @@ export async function signInCommand(ctx: AffineCommandContext): Promise<void> {
   }
   const password = await vscode.window.showInputBox({
     title: 'AFFiNE password',
-    prompt: 'Password is used once to mint an access token and is not stored',
+    prompt: 'Used to sign in once; it is never stored',
     password: true,
     ignoreFocusOut: true,
   });
@@ -99,6 +100,28 @@ export async function signInCommand(ctx: AffineCommandContext): Promise<void> {
   if (result.usedSessionFallback) {
     showAffineWarning('Signed in with a short-lived session. Access-token creation is unavailable on this AFFiNE server, so you may be signed out sooner than expected.');
   }
+  await refreshUi(ctx);
+}
+
+export async function setServerUrlCommand(ctx: AffineCommandContext): Promise<void> {
+  const current = ctx.settings.read().serverUrl;
+  const raw = await vscode.window.showInputBox({
+    title: 'AFFiNE server URL',
+    prompt: 'Use https://app.affine.pro for AFFiNE Cloud, or the address of your own AFFiNE server. Changing the server signs you out.',
+    value: current,
+    ignoreFocusOut: true,
+    validateInput: validateServerUrlInput,
+  });
+  if (raw === undefined) {
+    return;
+  }
+  const next = normalizeServerUrl(raw);
+  if (next === current) {
+    return;
+  }
+  await ctx.auth.clearCredential();
+  await ctx.settings.writeServerUrl(next);
+  showAffineInfo(`AFFiNE server set to ${next}. Sign in to continue.`);
   await refreshUi(ctx);
 }
 
