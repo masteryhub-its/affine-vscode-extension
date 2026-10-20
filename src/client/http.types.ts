@@ -7,6 +7,8 @@ export interface HttpRequest {
   readonly method: HttpMethod;
   readonly headers: Readonly<Record<string, string>>;
   readonly body?: string;
+  /** True for a request that only reads, even though it is not a GET (for example a GraphQL query). It may then be repeated or run twice at once. */
+  readonly safeToRepeat?: boolean;
 }
 
 export interface HttpResponse {

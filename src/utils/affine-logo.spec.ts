@@ -17,7 +17,7 @@ describe('affine logo', () => {
   });
 
   it('is the same drawing as the activity bar icon file', () => {
-    const file = readFileSync(join(__dirname, '../../media/affine.svg'), 'utf8');
+    const file = readFileSync(join(__dirname, '../../media/affine-mark.svg'), 'utf8');
     expect(file).toContain(AFFINE_MARK_PATH);
     expect(file).toContain(AFFINE_MARK_VIEW_BOX);
   });

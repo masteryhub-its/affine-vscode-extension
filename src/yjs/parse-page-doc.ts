@@ -59,6 +59,7 @@ export interface CodePageBlock {
   readonly kind: PageBlockKind.CODE;
   readonly language: string;
   readonly text: string;
+  readonly blockId?: string;
 }
 
 export interface DividerPageBlock {
@@ -91,6 +92,8 @@ export interface LinkedDocPageBlock {
 export interface TablePageBlock {
   readonly kind: PageBlockKind.TABLE;
   readonly rows: readonly (readonly string[])[];
+  /** The id of each cell, in the same shape as `rows`. */
+  readonly cellIds?: readonly (readonly string[])[];
 }
 
 export interface CalloutPageBlock {
@@ -329,7 +332,7 @@ function walk(blocks: Y.Map<unknown>, id: string, depth: number, visiting: Set<s
     return;
   }
   if (flavour === AffineBlockFlavour.CODE) {
-    out.push({ kind: PageBlockKind.CODE, language: readString(value, 'prop:language'), text: readString(value, 'prop:text') });
+    out.push({ kind: PageBlockKind.CODE, language: readString(value, 'prop:language'), text: readString(value, 'prop:text'), blockId: id });
     return;
   }
   if (flavour === AffineBlockFlavour.DIVIDER) {
@@ -364,7 +367,8 @@ function walk(blocks: Y.Map<unknown>, id: string, depth: number, visiting: Set<s
     return;
   }
   if (flavour === AffineBlockFlavour.TABLE) {
-    out.push({ kind: PageBlockKind.TABLE, rows: readTableRows(blocks, value) });
+    const table = readTableRows(blocks, value);
+    out.push({ kind: PageBlockKind.TABLE, rows: table.rows, cellIds: table.cellIds });
     return;
   }
   if (flavour === AffineBlockFlavour.CALLOUT) {
@@ -436,24 +440,33 @@ export function mentionUserIds(page: ParsedPage): readonly string[] {
   return [...ids];
 }
 
-function readTableRows(blocks: Y.Map<unknown>, table: Y.Map<unknown>): readonly (readonly string[])[] {
+interface TableCells {
+  readonly rows: readonly (readonly string[])[];
+  readonly cellIds: readonly (readonly string[])[];
+}
+
+function readTableRows(blocks: Y.Map<unknown>, table: Y.Map<unknown>): TableCells {
   const rows: string[][] = [];
+  const cellIds: string[][] = [];
   for (const rowId of readChildren(table)) {
     const row = blocks.get(rowId);
     if (!isYMap(row) || parseAffineBlockFlavour(readString(row, 'sys:flavour')) !== AffineBlockFlavour.TABLE_ROW) {
       continue;
     }
     const cells: string[] = [];
+    const ids: string[] = [];
     for (const cellId of readChildren(row)) {
       const cell = blocks.get(cellId);
       if (!isYMap(cell)) {
         continue;
       }
       cells.push(readString(cell, 'prop:text'));
+      ids.push(cellId);
     }
     rows.push(cells);
+    cellIds.push(ids);
   }
-  return rows;
+  return { rows, cellIds };
 }
 
 function readCalloutInlines(blocks: Y.Map<unknown>, callout: Y.Map<unknown>): readonly PageInlineSpan[] {

@@ -5,4 +5,5 @@ export enum DocumentPanelMessageType {
   COPY_TEXT = 'copyText',
   EDIT_BLOCK = 'editBlock',
   APPEND_PARAGRAPH = 'appendParagraph',
+  OPEN_MARKDOWN = 'openMarkdown',
 }

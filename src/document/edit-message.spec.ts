@@ -2,8 +2,13 @@ import { DocumentPanelMessageType } from '../utils/enums/document-panel-message-
 import { parseEditMessage } from './edit-message';
 
 describe('parseEditMessage', () => {
+  it('passes on that the block is code', () => {
+    expect(parseEditMessage({ type: DocumentPanelMessageType.EDIT_BLOCK, blockId: 'c', text: 'a\nb', multiline: true })).toEqual({ kind: 'edit', blockId: 'c', text: 'a\nb', multiline: true });
+    expect(parseEditMessage({ type: DocumentPanelMessageType.EDIT_BLOCK, blockId: 'c', text: 'x', multiline: 'yes' })).toMatchObject({ multiline: false });
+  });
+
   it('reads a request to change one block', () => {
-    expect(parseEditMessage({ type: DocumentPanelMessageType.EDIT_BLOCK, blockId: 'abc-123', text: 'New text' })).toEqual({ kind: 'edit', blockId: 'abc-123', text: 'New text' });
+    expect(parseEditMessage({ type: DocumentPanelMessageType.EDIT_BLOCK, blockId: 'abc-123', text: 'New text' })).toEqual({ kind: 'edit', blockId: 'abc-123', text: 'New text', multiline: false });
   });
 
   it('reads a request to add a paragraph', () => {
@@ -11,7 +16,7 @@ describe('parseEditMessage', () => {
   });
 
   it('allows an empty string when changing a block, so a block can be cleared', () => {
-    expect(parseEditMessage({ type: DocumentPanelMessageType.EDIT_BLOCK, blockId: 'a', text: '' })).toEqual({ kind: 'edit', blockId: 'a', text: '' });
+    expect(parseEditMessage({ type: DocumentPanelMessageType.EDIT_BLOCK, blockId: 'a', text: '' })).toEqual({ kind: 'edit', blockId: 'a', text: '', multiline: false });
   });
 
   it.each([

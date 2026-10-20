@@ -90,7 +90,7 @@
         {
           "id": "affine",
           "title": "AFFiNE",
-          "icon": "media/affine.svg"
+          "icon": "media/affine-mark.svg"
         }
       ]
     },
@@ -139,6 +139,16 @@
         "icon": "$(add)"
       },
       {
+        "command": "affine.sendSelectionToPage",
+        "title": "Send Selection to AFFiNE Page",
+        "icon": "$(book)"
+      },
+      {
+        "command": "affine.openAsMarkdown",
+        "title": "Open Page as Markdown",
+        "icon": "$(markdown)"
+      },
+      {
         "command": "affine.createFolder",
         "title": "New Organize Folder",
         "icon": "$(new-folder)"
@@ -184,6 +194,14 @@
         },
         {
           "command": "affine.duplicateDocument",
+          "when": "false"
+        },
+        {
+          "command": "affine.sendSelectionToPage",
+          "when": "editorHasSelection && affine.signedIn"
+        },
+        {
+          "command": "affine.openAsMarkdown",
           "when": "false"
         }
       ],
@@ -274,6 +292,10 @@
           "command": "affine.deleteDocument",
           "when": "view == affineExplorer && viewItem == affineDocument",
           "group": "1_organize@4"
+        },
+        {
+          "command": "affine.openAsMarkdown",
+          "when": "view == affineExplorer && viewItem == affineDocument"
         }
       ],
       "editor/context": [
@@ -281,6 +303,11 @@
           "command": "affine.openLink",
           "when": "editorHasSelection || editorTextFocus",
           "group": "navigation@9"
+        },
+        {
+          "command": "affine.sendSelectionToPage",
+          "when": "editorHasSelection && affine.signedIn",
+          "group": "affine@1"
         }
       ]
     },

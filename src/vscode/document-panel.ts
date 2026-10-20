@@ -6,13 +6,15 @@ import { AFFINE_DOCUMENT_VIEW_TYPE, documentPanelKey, isAffineDocumentViewType }
 import { renderPageErrorHtml, renderPageHtml, renderPageLoadingHtml } from '../document/render-page-html';
 import { formatAffineError } from '../errors/format-error';
 import { DocumentPanelMessageType } from '../utils/enums/document-panel-message-type.enum';
+import { DocumentPanelReplyType } from '../utils/enums/document-panel-reply-type.enum';
 import { parseDocumentPanelMessageType } from '../utils/document-panel-message-type';
 import { isAllowedHttpUrl } from '../utils/allowed-http-url';
 import { copyActionFromMessage } from '../document/copy-message';
 import { parseEditMessage } from '../document/edit-message';
 import { runEdit } from '../document/run-edit';
 import { createSerialQueue } from '../utils/serial-queue';
-import { showAffineInfo } from './messages';
+import { openPageAsMarkdown } from './markdown-view';
+import { showAffineError, showAffineInfo } from './messages';
 import { openAffineUrl } from './open-url';
 
 export interface OpenAffineDocumentInput {
@@ -42,6 +44,7 @@ export async function openAffineDocumentPanel(input: OpenAffineDocumentInput): P
   openPanels.set(panelKey, panel);
   let disposed = false;
   const enqueue = createSerialQueue();
+  let renderPage: () => Promise<void> = () => Promise.resolve();
   panel.onDidDispose(() => {
     disposed = true;
     openPanels.delete(panelKey);
@@ -63,9 +66,20 @@ export async function openAffineDocumentPanel(input: OpenAffineDocumentInput): P
     if (edit !== undefined) {
       void enqueue(async () => {
         const reply = await runEdit(input.client, input.workspaceId, input.docId, edit);
-        if (!disposed) {
-          await panel.webview.postMessage(reply);
+        if (disposed) {
+          return;
         }
+        if (reply.type === DocumentPanelReplyType.APPENDED && reply.reload) {
+          await renderPage();
+          return;
+        }
+        await panel.webview.postMessage(reply);
+      });
+      return;
+    }
+    if (parseDocumentPanelMessageType((message as { type?: unknown } | null)?.type) === DocumentPanelMessageType.OPEN_MARKDOWN) {
+      void openPageAsMarkdown(input.client, input.workspaceId, input.docId).catch((error: unknown) => {
+        showAffineError(error);
       });
       return;
     }
@@ -76,37 +90,41 @@ export async function openAffineDocumentPanel(input: OpenAffineDocumentInput): P
       });
     }
   });
-  try {
-    const preview = await input.client.loadPagePreview(input.workspaceId, input.docId);
-    if (disposed) {
-      return;
+  const render = async (): Promise<void> => {
+    try {
+      const preview = await input.client.loadPagePreview(input.workspaceId, input.docId);
+      if (disposed) {
+        return;
+      }
+      panel.webview.html = renderPageHtml({
+        page: preview.page,
+        fallbackTitle: input.title,
+        url,
+        nonce,
+        cspSource,
+        createdBy: preview.createdBy,
+        updatedBy: preview.updatedBy,
+        mentionPeople: preview.mentionPeople,
+        editable: true,
+        ...(input.tags === undefined ? {} : { tags: input.tags }),
+      });
+      panel.title = preview.page.title.trim().length > 0 ? preview.page.title : input.title;
+    } catch (error: unknown) {
+      if (disposed) {
+        return;
+      }
+      panel.webview.html = renderPageErrorHtml({
+        title: input.title,
+        message: formatAffineError(error),
+        url,
+        nonce,
+        cspSource,
+        serverUrl: input.serverUrl,
+      });
     }
-    panel.webview.html = renderPageHtml({
-      page: preview.page,
-      fallbackTitle: input.title,
-      url,
-      nonce,
-      cspSource,
-      createdBy: preview.createdBy,
-      updatedBy: preview.updatedBy,
-      mentionPeople: preview.mentionPeople,
-      editable: true,
-      ...(input.tags === undefined ? {} : { tags: input.tags }),
-    });
-    panel.title = preview.page.title.trim().length > 0 ? preview.page.title : input.title;
-  } catch (error: unknown) {
-    if (disposed) {
-      return;
-    }
-    panel.webview.html = renderPageErrorHtml({
-      title: input.title,
-      message: formatAffineError(error),
-      url,
-      nonce,
-      cspSource,
-      serverUrl: input.serverUrl,
-    });
-  }
+  };
+  renderPage = render;
+  await render();
 }
 
 export async function closeAffineDocumentPanels(): Promise<void> {

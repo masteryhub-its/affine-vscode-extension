@@ -7,7 +7,7 @@ import { DocumentPanelMessageType } from '../utils/enums/document-panel-message-
 import { cspImgSrc } from '../utils/url-protocol';
 import { renderDocumentShell } from '../ui/document-shell';
 import { DocumentPanelReplyType } from '../utils/enums/document-panel-reply-type.enum';
-import { editableTextOf } from './editable-block';
+import { editableCellsOf, editableTextOf, type EditableText } from './editable-block';
 import { numberListItems } from './list-numbering';
 import { extractOutline, headingAnchorId } from './outline';
 import type { PageBlock, PageInlineSpan, ParsedPage } from '../yjs/parse-page-doc';
@@ -97,15 +97,20 @@ interface BlockContext {
 }
 
 const WRITE_PLACEHOLDER = 'Write something…';
+const NEW_BLOCK_PLACEHOLDER = 'Write something… (# heading, - list, [] to-do, > quote, **bold**)';
 
 /** The attributes that make a plain text block editable in place; empty when editing is off or the block has formatting. */
 function editAttrs(block: PageBlock, context: BlockContext, baseClass?: string): string {
-  const editable = context.editable ? editableTextOf(block) : undefined;
+  return attrsFor(context.editable ? editableTextOf(block) : undefined, baseClass);
+}
+
+function attrsFor(editable: EditableText | undefined, baseClass?: string): string {
   const classes = baseClass === undefined ? 'editable' : `${baseClass} editable`;
   if (editable === undefined) {
     return baseClass === undefined ? '' : ` class="${baseClass}"`;
   }
-  return ` class="${classes}" contenteditable="plaintext-only" spellcheck="true" role="textbox" aria-label="Edit text" data-block="${escapeHtml(editable.blockId)}" data-original="${escapeHtml(editable.text)}" data-placeholder="${WRITE_PLACEHOLDER}"`;
+  const lines = editable.multiline === true ? ' data-multiline="1" aria-multiline="true"' : '';
+  return ` class="${classes}" contenteditable="plaintext-only" spellcheck="${editable.multiline === true ? 'false' : 'true'}" role="textbox" aria-label="Edit text" data-block="${escapeHtml(editable.blockId)}" data-original="${escapeHtml(editable.text)}" data-placeholder="${WRITE_PLACEHOLDER}"${lines}`;
 }
 
 function checkboxIcon(checked: boolean): string {
@@ -134,7 +139,7 @@ function renderBlock(block: PageBlock, context: BlockContext): string {
     }
     case PageBlockKind.CODE: {
       const language = block.language.trim().length > 0 ? block.language.trim() : 'text';
-      return `<div class="code-block"><div class="code-head"><span>${escapeHtml(language)}</span><button type="button" class="btn ghost" data-copy-code>Copy</button></div><pre><code class="lang-${escapeHtml(block.language)}">${escapeHtml(block.text)}</code></pre></div>`;
+      return `<div class="code-block"><div class="code-head"><span>${escapeHtml(language)}</span><button type="button" class="btn ghost" data-copy-code>Copy</button></div><pre><code${attrsFor(context.editable ? editableTextOf(block) : undefined, `lang-${escapeHtml(block.language)}`)}>${escapeHtml(block.text)}</code></pre></div>`;
     }
     case PageBlockKind.DIVIDER:
       return '<hr />';
@@ -164,7 +169,8 @@ function renderBlock(block: PageBlock, context: BlockContext): string {
       return href === undefined ? `<p class="linked-doc">${inner}</p>` : `<p><a class="linked-doc" href="${escapeHtml(href)}">${inner}</a></p>`;
     }
     case PageBlockKind.TABLE: {
-      const body = block.rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('');
+      const cells = context.editable ? editableCellsOf(block) : undefined;
+      const body = block.rows.map((row, rowIndex) => `<tr>${row.map((cell, columnIndex) => `<td${attrsFor(cells?.[rowIndex]?.[columnIndex])}>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('');
       return `<table class="preview-table">${body}</table>`;
     }
     case PageBlockKind.CALLOUT:
@@ -205,7 +211,7 @@ function renderAuthors(createdBy: PageAuthor | undefined, updatedBy: PageAuthor 
 }
 
 function newBlockRow(): string {
-  return `<p class="editable new-block" contenteditable="plaintext-only" spellcheck="true" role="textbox" aria-label="Write a new paragraph" data-new="true" data-placeholder="${WRITE_PLACEHOLDER}"></p>`;
+  return `<p class="editable new-block" contenteditable="plaintext-only" spellcheck="true" role="textbox" aria-label="Write a new block" data-new="true" data-placeholder="${NEW_BLOCK_PLACEHOLDER}"></p>`;
 }
 
 function renderBody(page: ParsedPage, people: MentionPeople, pageUrl: string, serverUrl: string, editable: boolean): string {
@@ -355,6 +361,9 @@ const SCRIPT = `
         return;
       }
       event.preventDefault();
+      if (link.closest('[data-block]') && !event.ctrlKey && !event.metaKey) {
+        return;
+      }
       post({ type: '${DocumentPanelMessageType.OPEN_HREF}', href: link.getAttribute('href') });
     });`;
 
@@ -368,7 +377,12 @@ const EDIT_SCRIPT = `
     const oneLine = (value) => value.replace(/\\s*[\\r\\n]+\\s*/g, ' ');
     const wire = (el) => {
       el.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' && !event.shiftKey) {
+        if (event.key === 'Enter' && el.hasAttribute('data-multiline')) {
+          if (event.ctrlKey || event.metaKey) {
+            event.preventDefault();
+            el.blur();
+          }
+        } else if (event.key === 'Enter' && !event.shiftKey) {
           event.preventDefault();
           el.blur();
         } else if (event.key === 'Escape') {
@@ -382,7 +396,8 @@ const EDIT_SCRIPT = `
           delete el.dataset.skip;
           return;
         }
-        const text = oneLine(el.textContent || '');
+        const multiline = el.hasAttribute('data-multiline');
+        const text = multiline ? (el.textContent || '').replace(/\\r\\n?/g, '\\n') : oneLine(el.textContent || '');
         if (el.hasAttribute('data-new')) {
           if (text.trim().length === 0) {
             el.textContent = '';
@@ -396,7 +411,7 @@ const EDIT_SCRIPT = `
         if (text === (el.dataset.original || '')) return;
         setStatus('Saving…');
         el.setAttribute('aria-busy', 'true');
-        post({ type: '${DocumentPanelMessageType.EDIT_BLOCK}', blockId: el.dataset.block, text });
+        post({ type: '${DocumentPanelMessageType.EDIT_BLOCK}', blockId: el.dataset.block, text, multiline });
       });
     };
     const blockElement = (id) => (id ? document.querySelector('[data-block="' + CSS.escape(id) + '"]') : null);
@@ -441,7 +456,7 @@ function renderShell(input: RenderPageShellInput): string {
   const editable = input.editable === true;
   const statusChip = editable ? '<span class="save-status muted" role="status" aria-live="polite"></span><span class="chip">Click text to edit</span>' : '<span class="chip">Read-only</span>';
   const actions = input.showOpen
-    ? `<div class="actions" role="toolbar" aria-label="Page actions">${statusChip}<button type="button" class="btn ghost" data-message="${DocumentPanelMessageType.COPY_LINK}">Copy link</button><button type="button" class="btn primary" id="open-external">Open in AFFiNE</button></div>`
+    ? `<div class="actions" role="toolbar" aria-label="Page actions">${statusChip}<button type="button" class="btn ghost" data-message="${DocumentPanelMessageType.OPEN_MARKDOWN}">Markdown</button><button type="button" class="btn ghost" data-message="${DocumentPanelMessageType.COPY_LINK}">Copy link</button><button type="button" class="btn primary" id="open-external">Open in AFFiNE</button></div>`
     : `<div class="actions">${statusChip}</div>`;
   const outline = input.outline ?? '';
   const layoutClass = outline.length > 0 ? 'doc-layout' : 'doc-layout no-outline';

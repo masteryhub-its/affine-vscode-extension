@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import type { AuthService } from '../auth/auth-service';
 import { detectAffinePageUrls } from '../document/detect-links';
+import { selectionBlocks } from '../document/selection-blocks';
 import { buildDocumentUrl } from '../client/document-url';
 import type { AffineWorkspace } from '../client/affine.types';
 import { normalizeServerUrl, validateServerUrlInput } from '../config/settings';
@@ -10,6 +11,7 @@ import { searchAllWorkspaces } from '../search/search-all-workspaces';
 import { resolveSearchWorkspaces } from '../search/resolve-workspaces';
 import { SignInMethod } from '../utils/enums/sign-in-method.enum';
 import { parseDocumentNode, toDocumentNode, toWorkspaceNode, type AffineTreeDocumentNode } from '../tree/tree-model';
+import { openPageAsMarkdown } from './markdown-view';
 import { showAffineError, showAffineInfo, showAffineWarning } from './messages';
 import { openAffineUrl } from './open-url';
 import type { AffineStatusBar } from './status-bar';
@@ -120,6 +122,7 @@ export async function setServerUrlCommand(ctx: AffineCommandContext): Promise<vo
     return;
   }
   await ctx.auth.clearCredential();
+  await ctx.tree.resetSaved();
   await ctx.settings.writeServerUrl(next);
   showAffineInfo(`AFFiNE server set to ${next}. Sign in to continue.`);
   await refreshUi(ctx);
@@ -127,6 +130,7 @@ export async function setServerUrlCommand(ctx: AffineCommandContext): Promise<vo
 
 export async function signOutCommand(ctx: AffineCommandContext): Promise<void> {
   await ctx.auth.clearCredential();
+  await ctx.tree.resetSaved();
   showAffineInfo('Signed out of AFFiNE');
   await refreshUi(ctx);
 }
@@ -244,6 +248,76 @@ async function pickWorkspaceId(ctx: AffineCommandContext, workspaces: readonly A
   return selected?.workspaceId;
 }
 
+interface SendTargetItem extends vscode.QuickPickItem {
+  readonly target: 'new' | 'existing';
+}
+
+interface PagePickItem extends vscode.QuickPickItem {
+  readonly docId: string;
+}
+
+/** Puts the selected code on an AFFiNE page: a new page, or the end of an existing one. */
+export async function sendSelectionToPageCommand(ctx: AffineCommandContext): Promise<void> {
+  const editor = vscode.window.activeTextEditor;
+  if (editor === undefined || editor.selection.isEmpty) {
+    showAffineInfo('Select some text first');
+    return;
+  }
+  const { selection, document } = editor;
+  const relativePath = vscode.workspace.asRelativePath(document.uri, false);
+  const blocks = selectionBlocks({
+    relativePath,
+    startLine: selection.start.line + 1,
+    endLine: selection.end.character === 0 && selection.end.line > selection.start.line ? selection.end.line : selection.end.line + 1,
+    languageId: document.languageId,
+    text: document.getText(selection),
+  });
+  const targets: SendTargetItem[] = [
+    { label: '$(new-file) New page', description: 'Create a page with this selection', target: 'new' },
+    { label: '$(add) Add to an existing page', description: 'Put it at the end of a page', target: 'existing' },
+  ];
+  const target = await vscode.window.showQuickPick(targets, { title: 'Send selection to AFFiNE' });
+  if (target === undefined) {
+    return;
+  }
+  const client = await ctx.auth.requireClient();
+  const workspaceId = await pickWorkspaceId(ctx, await client.listWorkspaces());
+  if (workspaceId === undefined) {
+    return;
+  }
+  if (target.target === 'new') {
+    const fileName = relativePath.split(/[\\/]/u).pop() ?? relativePath;
+    const title = await vscode.window.showInputBox({ title: 'New page title', value: fileName, ignoreFocusOut: true });
+    if (title === undefined || title.trim().length === 0) {
+      return;
+    }
+    const created = await client.createPage({ workspaceId, title: title.trim(), folderId: null, content: blocks });
+    await refreshUi(ctx);
+    showAffineInfo(`Created “${title.trim()}”`);
+    await openDocumentRef(ctx, workspaceId, created.id, title.trim());
+    return;
+  }
+  const pages = (await client.listWorkspacePages(workspaceId)).documents;
+  const items: PagePickItem[] = pages.map((page) => ({ label: page.title ?? 'Untitled', docId: page.id }));
+  const page = await vscode.window.showQuickPick(items, { title: 'Add to which page?', matchOnDescription: true });
+  if (page === undefined) {
+    return;
+  }
+  await client.appendBlocks(workspaceId, page.docId, blocks);
+  showAffineInfo(`Added to “${page.label}”`);
+  await openDocumentRef(ctx, workspaceId, page.docId, page.label);
+}
+
+/** Opens a page as Markdown text in an editor tab. */
+export async function openAsMarkdownCommand(ctx: AffineCommandContext, nodeArg?: unknown): Promise<void> {
+  const node = parseDocumentNode(nodeArg);
+  if (node === undefined) {
+    showAffineInfo('Choose a page in the AFFiNE tree first');
+    return;
+  }
+  await openPageAsMarkdown(await ctx.auth.requireClient(), node.workspaceId, node.docId);
+}
+
 export function registerAffineCommands(context: vscode.ExtensionContext, ctx: AffineCommandContext): void {
   const wrap = (handler: (...args: unknown[]) => Promise<void>): ((...args: unknown[]) => void) => {
     return (...args: unknown[]): void => {
@@ -258,6 +332,18 @@ export function registerAffineCommands(context: vscode.ExtensionContext, ctx: Af
   };
 
   context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'affine.openAsMarkdown',
+      wrap(async (node: unknown) => {
+        await openAsMarkdownCommand(ctx, node);
+      })
+    ),
+    vscode.commands.registerCommand(
+      'affine.sendSelectionToPage',
+      wrap(async () => {
+        await sendSelectionToPageCommand(ctx);
+      })
+    ),
     vscode.commands.registerCommand(
       'affine.search',
       wrap(async () => {

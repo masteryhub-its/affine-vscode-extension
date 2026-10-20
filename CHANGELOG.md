@@ -11,6 +11,12 @@ Redesigned interface. Everything from 1.0.1 is included.
 - Highlight and text colours in pages now follow the editor theme
 - One theme stylesheet built only from editor theme colours, with high contrast support
 - **Edit in place:** click a plain paragraph, heading, quote or list item to change it, press Enter or click away to save, Escape to cancel; click the empty line at the end to write a new paragraph. Only the changed characters are sent, blocks with formatting stay read-only, and a failed save restores your text
+- Edit-in-place also covers text with bold, italic, links, colours or highlights (formatting on the text you leave alone is kept), code blocks (line breaks kept; Ctrl or Cmd+Enter saves) and table cells. Blocks with @mentions or linked pages stay read-only. A plain click in linked text places the cursor; Ctrl or Cmd+click opens the link
+- Write new blocks on the empty line at the end of a page with the usual shortcuts: `#` headings, `-` bullets, `1.` numbers, `[]` to-dos, `>` quotes, `---` dividers, a fence for code, and `**bold**`, `*italic*`, `~~strike~~`, `` `code` `` and `[text](url)` for formatting
+- **Send Selection to AFFiNE Page** (editor right-click): puts the selected code, with its file and lines, on a new page or at the end of an existing one
+- **Open Page as Markdown** (page right-click and a button in the preview): opens the page as Markdown text in an editor tab
+- People's pictures (mentions, authors, account) are fetched with your session and embedded, so they no longer show as broken images
+- The pages tree is saved and shown at once on the next start, then refreshed in the background; independent requests run in parallel and slow reads race a second attempt
 - Requests to AFFiNE are retried (up to three attempts) when the connection itself fails, including the live-sync connection used for saving, which makes a flaky network far more reliable
 
 ## 1.0.1 — 2026-10-19

@@ -3,6 +3,9 @@ import type { AuthService } from '../auth/auth-service';
 import { isNotSignedInError } from '../errors/affine-error';
 import { findPageTreeNode, pageTreeToExplorerNodes, toErrorNode, toWorkspaceNode, type AffineTreeNode } from '../tree/tree-model';
 import { formatAffineError } from '../errors/format-error';
+import { loadAllWorkspacePages } from '../sync/load-workspaces';
+import { PagesCache, type SnapshotStore } from '../sync/pages-cache';
+import { accountKeyOf } from '../sync/tree-snapshot';
 import { presentFolder, presentPage, presentWorkspace, type IconSpec } from '../tree/page-presentation';
 import { escapeMarkdown } from '../utils/markdown-escape';
 import { AffineTreeKind } from '../utils/enums/affine-tree-kind.enum';
@@ -43,13 +46,43 @@ export class AffineTreeProvider implements vscode.TreeDataProvider<AffineTreeNod
 
   public readonly onDidChangeTreeData: vscode.Event<AffineTreeNode | undefined> = this.emitter.event;
 
-  public constructor(private readonly auth: AuthService) {}
+  private readonly pagesCache: PagesCache;
 
+  public constructor(
+    private readonly auth: AuthService,
+    store: SnapshotStore,
+    private readonly serverUrl: () => string,
+    notify: (message: string) => void
+  ) {
+    this.pagesCache = new PagesCache({
+      store,
+      now: () => Date.now(),
+      onRefreshed: () => {
+        this.emitter.fire(undefined);
+      },
+      onRefreshFailed: (message) => {
+        notify(`Showing your saved pages. Could not refresh: ${message}`);
+      },
+    });
+  }
+
+  /** Redraws the tree. What was last saved is shown at once and refreshed in the background. */
   public refresh(): void {
+    this.pagesCache.invalidate();
+    this.clearLoaded();
+    this.emitter.fire(undefined);
+  }
+
+  /** Forgets the saved copy too, for signing out, switching server or a full reload. */
+  public async resetSaved(): Promise<void> {
+    await this.pagesCache.reset();
+    this.clearLoaded();
+  }
+
+  private clearLoaded(): void {
     this.pageTrees.clear();
     this.pageMeta.clear();
     this.titles = [];
-    this.emitter.fire(undefined);
   }
 
   public catalogTitles(): readonly CatalogPageTitle[] {
@@ -125,10 +158,11 @@ export class AffineTreeProvider implements vscode.TreeDataProvider<AffineTreeNod
     try {
       if (element === undefined) {
         const client = await this.auth.requireClient();
-        const workspaces = await client.listWorkspaces();
+        const credential = await this.auth.readCredential();
+        const context = { serverUrl: this.serverUrl(), accountKey: credential === undefined ? '' : accountKeyOf(credential) };
+        const { workspaces: loaded } = await this.pagesCache.read(context, async () => loadAllWorkspacePages(client, await client.listWorkspaces()));
         const nodes: AffineTreeNode[] = [];
-        for (const workspace of workspaces) {
-          const pages = await client.listWorkspacePages(workspace.id);
+        for (const { workspace, pages } of loaded) {
           this.pageTrees.set(workspace.id, pages.tree);
           this.rememberMeta(workspace.id, pages);
           this.mergeTitles(workspace.id, pages.documents);

@@ -1,3 +1,4 @@
+import type { NewBlockSpec } from '../document/new-block';
 import type { WorkspaceCollection } from '../organize/collections';
 import type { PageTreeNode } from '../yjs/page-tree';
 import type { ParsedPage } from '../yjs/parse-page-doc';
@@ -112,6 +113,8 @@ export interface CreatePageInput {
   readonly workspaceId: string;
   readonly title: string;
   readonly folderId: string | null;
+  /** Blocks to put on the new page, after its empty first line. */
+  readonly content?: readonly NewBlockSpec[];
 }
 
 export interface CreateFolderInput {

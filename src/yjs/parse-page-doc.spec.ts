@@ -99,7 +99,7 @@ function encodePage(blocks: readonly EncodeBlockInput[]): Uint8Array {
 
 function parseWithoutIds(bin: Uint8Array): ParsedPage {
   const parsed = parsePageDoc(bin);
-  return { ...parsed, blocks: parsed.blocks.map((block) => Object.fromEntries(Object.entries(block).filter(([key]) => key !== 'blockId')) as unknown as PageBlock) };
+  return { ...parsed, blocks: parsed.blocks.map((block) => Object.fromEntries(Object.entries(block).filter(([key]) => key !== 'blockId' && key !== 'cellIds')) as unknown as PageBlock) };
 }
 
 describe('parsePageDoc', () => {
@@ -315,6 +315,23 @@ describe('parsePageDoc', () => {
         ],
       },
     ]);
+  });
+
+  it('keeps the ids of code blocks and table cells, so they can be edited', () => {
+    const bin = encodePage([
+      { id: 'page', flavour: 'affine:page', children: ['note'], title: 'Spec' },
+      { id: 'note', flavour: 'affine:note', children: ['code', 'table'] },
+      { id: 'code', flavour: 'affine:code', language: 'ts', text: 'x' },
+      { id: 'table', flavour: 'affine:table', children: ['r1', 'r2'] },
+      { id: 'r1', flavour: 'affine:table-row', children: ['a', 'b'] },
+      { id: 'a', flavour: 'affine:table-cell', text: 'A' },
+      { id: 'b', flavour: 'affine:table-cell', text: 'B' },
+      { id: 'r2', flavour: 'affine:table-row', children: ['c'] },
+      { id: 'c', flavour: 'affine:table-cell', text: 'C' },
+    ]);
+    const [code, table] = parsePageDoc(bin).blocks;
+    expect(code).toMatchObject({ kind: PageBlockKind.CODE, blockId: 'code' });
+    expect(table).toMatchObject({ kind: PageBlockKind.TABLE, rows: [['A', 'B'], ['C']], cellIds: [['a', 'b'], ['c']] });
   });
 
   it('reads embed-linked-doc blocks by page id', () => {

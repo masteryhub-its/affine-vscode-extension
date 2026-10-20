@@ -369,11 +369,13 @@ describe('renderPageHtml', () => {
 
   describe('inline editing', () => {
     const plain = { bold: false, italic: false, strike: false, underline: false, code: false, link: undefined, mentionUserId: undefined, linkedDocId: undefined };
-    const run = (value: string, extra: Partial<typeof plain> & { link?: string } = {}): readonly PageInlineSpan[] => [{ text: value, ...plain, ...extra }];
+    const run = (value: string, extra: Partial<Omit<typeof plain, 'link' | 'mentionUserId'>> & { link?: string; mentionUserId?: string } = {}): readonly PageInlineSpan[] => [
+      { text: value, ...plain, ...extra },
+    ];
     const blocks: ParsedPage['blocks'] = [
       { kind: PageBlockKind.HEADING, level: 2, blockId: 'h1', inlines: run('Goals') },
       { kind: PageBlockKind.PARAGRAPH, blockId: 'p1', inlines: run('Plain <text>') },
-      { kind: PageBlockKind.PARAGRAPH, blockId: 'p2', inlines: run('Bold one', { bold: true }) },
+      { kind: PageBlockKind.PARAGRAPH, blockId: 'p2', inlines: run('Mention one', { mentionUserId: 'u1' }) },
       { kind: PageBlockKind.LIST, list: PageListKind.BULLETED, checked: false, depth: 0, blockId: 'l1', inlines: run('Item') },
       { kind: PageBlockKind.QUOTE, blockId: 'q1', inlines: run('Said') },
       { kind: PageBlockKind.CODE, language: 'ts', text: 'x' },
@@ -397,11 +399,53 @@ describe('renderPageHtml', () => {
       expect(html).toContain('class="editable"');
     });
 
-    it('does not offer inline editing for a block with formatting, so it is never flattened', () => {
+    it('does not offer inline editing for a block with a mention, whose shown text is not its stored text', () => {
       expect(render(true)).not.toContain('data-block="p2"');
     });
 
-    it('does not offer inline editing for code or dividers', () => {
+    it('lets text with bold or a link be edited too', () => {
+      const html = render(true, page({ title: 'T', blocks: [{ kind: PageBlockKind.PARAGRAPH, blockId: 'b1', inlines: run('Bold one', { bold: true }) }] }));
+      expect(html).toContain('data-block="b1"');
+    });
+
+    it('opens a link inside editable text only with Ctrl or Cmd, so a plain click places the cursor', () => {
+      const html = render(true);
+      expect(html).toContain("link.closest('[data-block]') && !event.ctrlKey && !event.metaKey");
+    });
+
+    it('lets code blocks be edited with their line breaks, and table cells one by one', () => {
+      const html = render(
+        true,
+        page({
+          title: 'T',
+          blocks: [
+            { kind: PageBlockKind.CODE, language: 'ts', text: 'a\nb', blockId: 'c1' },
+            { kind: PageBlockKind.TABLE, rows: [['A', 'B']], cellIds: [['x', 'y']] },
+          ],
+        })
+      );
+      expect(html).toMatch(/<code[^>]*data-block="c1"[^>]*data-multiline="1"/u);
+      expect(html).toMatch(/<td[^>]*data-block="x"[^>]*>A<\/td>/u);
+      expect(html).toMatch(/<td[^>]*data-block="y"[^>]*>B<\/td>/u);
+      expect(html.match(/<td[^>]*data-multiline/gu)).toBeNull();
+    });
+
+    it('keeps code and table cells read-only when editing is off', () => {
+      const html = render(
+        false,
+        page({
+          title: 'T',
+          blocks: [
+            { kind: PageBlockKind.CODE, language: 'ts', text: 'a', blockId: 'c1' },
+            { kind: PageBlockKind.TABLE, rows: [['A']], cellIds: [['x']] },
+          ],
+        })
+      );
+      expect(html).not.toContain('data-block="');
+      expect(html).not.toContain('contenteditable');
+    });
+
+    it('does not offer inline editing for dividers or code without an id', () => {
       const html = render(true);
       expect(html.match(/<(?:p|h\d|span|blockquote)\b[^>]*\sdata-block="/gu)?.length).toBe(4);
     });

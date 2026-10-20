@@ -1,6 +1,6 @@
 import { CLIENT_VERSION_HEADER } from '../constants';
 import { type AffineError, AffineErrorCode } from '../errors/affine-error';
-import { GraphQLClient } from './graphql-client';
+import { GraphQLClient, isMutation } from './graphql-client';
 import type { HttpClient, HttpRequest, HttpResponse } from './http.types';
 import { AffineCredentialKind } from '../utils/enums/affine-credential-kind.enum';
 import { HttpMethod } from '../utils/enums/http-method.enum';
@@ -84,5 +84,24 @@ describe('GraphQLClient', () => {
       code: AffineErrorCode.AUTHENTICATION_REQUIRED,
       message: 'Authentication required',
     });
+  });
+
+  it('marks a query as safe to repeat and a mutation as not', async () => {
+    const { client, requests } = createFakeHttp([jsonResponse(200, { data: { a: 1 } }), jsonResponse(200, { data: { b: 1 } })]);
+    const graphql = new GraphQLClient({ serverUrl: 'https://affine.example', clientVersion: '0.26.0', http: client, credential: { kind: AffineCredentialKind.ACCESS_TOKEN, token: 'sk' } });
+    await graphql.request({ query: 'query { a }' });
+    await graphql.request({ query: 'mutation { b }' });
+    expect(requests[0]?.safeToRepeat).toBe(true);
+    expect(requests[1]?.safeToRepeat).toBe(false);
+  });
+});
+
+describe('isMutation', () => {
+  it.each(['mutation { x }', '  mutation Named($a: Int) { x }', '# comment\nmutation { x }', 'MUTATION { x }'])('recognises %j as a mutation', (query) => {
+    expect(isMutation(query)).toBe(true);
+  });
+
+  it.each(['query { x }', '{ x }', 'query Mutations { x }', 'subscription { x }', '', 'fragment F on T { mutation }'])('treats %j as a read', (query) => {
+    expect(isMutation(query)).toBe(false);
   });
 });

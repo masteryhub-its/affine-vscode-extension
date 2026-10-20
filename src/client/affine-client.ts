@@ -5,7 +5,8 @@ import type { AffineSync } from '../sync/affine-sync';
 import { encodeCreateFolderUpdate } from '../yjs/encode-create-folder-update';
 import { encodeFolderMoveUpdate, emptyYDocBin } from '../yjs/encode-folder-move-update';
 import { encodeCreatePageMetaUpdate, encodeRenamePageUpdate, encodeRestorePageUpdate, encodeTrashPageUpdate } from '../yjs/encode-page-meta-update';
-import { encodeAppendParagraphUpdate, encodeBlockTextUpdate } from '../yjs/encode-block-edit';
+import type { NewBlockSpec } from '../document/new-block';
+import { encodeAppendBlocksUpdate, encodeBlockTextUpdate, encodePageWithBlocks } from '../yjs/encode-block-edit';
 import { encodeEmptyPageDoc } from '../yjs/encode-page-doc';
 import { parseCollections } from '../organize/collections';
 import { nextOrganizeIndex } from '../organize/organize-index';
@@ -34,6 +35,7 @@ import type {
 } from './affine.types';
 import { cookieHeaderFromRecords, findCookieValue, affineSessionCookies, parseSetCookieHeaders } from './cookies';
 import { credentialHeaders } from './credential-headers';
+import { toAvatarDataUri } from './avatar-data-uri';
 import { buildWorkspaceDocUrl, documentTitle, foldersTableDocId, resolveAssetUrl } from './document-url';
 import { GraphQLClient } from './graphql-client';
 import { lookupMentions } from './mention-lookup';
@@ -123,6 +125,7 @@ interface PageAuthors {
 
 export class AffineClient {
   private readonly graphql: GraphQLClient;
+  private readonly avatars = new Map<string, Promise<string | undefined>>();
   private readonly options: AffineClientOptions;
 
   public constructor(options: AffineClientOptions) {
@@ -148,7 +151,7 @@ export class AffineClient {
       id: data.currentUser.id,
       email: data.currentUser.email,
       name: data.currentUser.name,
-      avatarUrl: resolveAssetUrl(this.options.serverUrl, data.currentUser.avatarUrl),
+      avatarUrl: await this.inlineAvatar(resolveAssetUrl(this.options.serverUrl, data.currentUser.avatarUrl)),
     };
   }
 
@@ -189,8 +192,9 @@ export class AffineClient {
 
   public async listWorkspacePages(workspaceId: string): Promise<AffineWorkspacePages> {
     try {
-      const parsed = parseWorkspaceRoot(await this.fetchWorkspaceDoc(workspaceId, workspaceId));
-      const folders = await this.loadFolderRecords(workspaceId);
+      // The two documents do not depend on each other, so they are fetched together.
+      const [rootBin, folders] = await Promise.all([this.fetchWorkspaceDoc(workspaceId, workspaceId), this.loadFolderRecords(workspaceId)]);
+      const parsed = parseWorkspaceRoot(rootBin);
       const documents = parsed.pages.map((page) => ({
         id: page.id,
         workspaceId,
@@ -217,8 +221,8 @@ export class AffineClient {
   }
 
   public async loadPagePreview(workspaceId: string, docId: string): Promise<PagePreview> {
-    const page = await this.loadPageDoc(workspaceId, docId);
-    const authors = await this.loadPageAuthors(workspaceId, docId);
+    // The page and its authors are independent, so they are fetched together; only the mention names need the page.
+    const [page, authors] = await Promise.all([this.loadPageDoc(workspaceId, docId), this.loadPageAuthors(workspaceId, docId)]);
     return {
       page,
       createdBy: authors.createdBy,
@@ -261,13 +265,17 @@ export class AffineClient {
 
   public async createPage(input: CreatePageInput): Promise<AffineDocument> {
     const docId = crypto.randomUUID();
-    const pageBin = encodeEmptyPageDoc({
-      title: input.title,
-      pageId: crypto.randomUUID(),
-      noteId: crypto.randomUUID(),
-      paragraphId: crypto.randomUUID(),
-      surfaceId: crypto.randomUUID(),
-    });
+    const pageBin = encodePageWithBlocks(
+      encodeEmptyPageDoc({
+        title: input.title,
+        pageId: crypto.randomUUID(),
+        noteId: crypto.randomUUID(),
+        paragraphId: crypto.randomUUID(),
+        surfaceId: crypto.randomUUID(),
+      }),
+      input.content ?? [],
+      () => crypto.randomUUID()
+    );
     const sync = this.requireSync();
     await this.pushStep('create the page document', () => sync.pushDocUpdate({ workspaceId: input.workspaceId, docId, update: pageBin }));
     const metaUpdate = encodeCreatePageMetaUpdate(await this.fetchWorkspaceDoc(input.workspaceId, input.workspaceId), { docId, title: input.title });
@@ -320,13 +328,27 @@ export class AffineClient {
     return true;
   }
 
-  /** Adds a new text paragraph at the end of a page and returns the id of the new block. */
-  public async appendParagraph(workspaceId: string, docId: string, text: string): Promise<string> {
+  /** Adds a new block (paragraph, heading, list item, quote, code or divider) at the end of a page and returns its id. */
+  public async appendBlock(workspaceId: string, docId: string, spec: NewBlockSpec): Promise<string> {
+    return (await this.appendBlocks(workspaceId, docId, [spec]))[0] ?? '';
+  }
+
+  /** Adds new blocks together at the end of a page and returns their ids. */
+  public async appendBlocks(workspaceId: string, docId: string, specs: readonly NewBlockSpec[]): Promise<readonly string[]> {
     const sync = this.requireSync();
-    const blockId = crypto.randomUUID();
-    const update = encodeAppendParagraphUpdate(await this.fetchWorkspaceDoc(workspaceId, docId), text, blockId);
+    const ids: string[] = [];
+    const update = encodeAppendBlocksUpdate(await this.fetchWorkspaceDoc(workspaceId, docId), specs, () => {
+      const id = crypto.randomUUID();
+      ids.push(id);
+      return id;
+    });
     await this.pushStep('add your text', () => sync.pushDocUpdate({ workspaceId, docId, update }));
-    return blockId;
+    return ids;
+  }
+
+  /** Adds a new text paragraph at the end of a page and returns the id of the new block. */
+  public appendParagraph(workspaceId: string, docId: string, text: string): Promise<string> {
+    return this.appendBlock(workspaceId, docId, { kind: 'paragraph', segments: [{ text }] });
   }
 
   public async searchDocs(workspaceId: string, keyword: string): Promise<readonly AffineSearchHit[]> {
@@ -405,10 +427,11 @@ export class AffineClient {
         variables: { workspaceId, docId },
       });
       const doc = data.workspace === null ? undefined : data.workspace.doc;
-      return {
-        createdBy: this.toAuthor(doc === null || doc === undefined ? null : doc.createdBy),
-        updatedBy: this.toAuthor(doc === null || doc === undefined ? null : doc.lastUpdatedBy),
-      };
+      const [createdBy, updatedBy] = await Promise.all([
+        this.toAuthor(doc === null || doc === undefined ? null : doc.createdBy),
+        this.toAuthor(doc === null || doc === undefined ? null : doc.lastUpdatedBy),
+      ]);
+      return { createdBy, updatedBy };
     } catch {
       return { createdBy: undefined, updatedBy: undefined };
     }
@@ -425,10 +448,32 @@ export class AffineClient {
     if (name === undefined || name.length === 0) {
       return undefined;
     }
-    return { name, avatarUrl: resolveAssetUrl(this.options.serverUrl, data.publicUserById?.avatarUrl) };
+    return { name, avatarUrl: await this.inlineAvatar(resolveAssetUrl(this.options.serverUrl, data.publicUserById?.avatarUrl)) };
   }
 
-  private toAuthor(user: GraphQLUserFields | null): PageAuthor | undefined {
+  /** The picture as a data address, fetched here with the signed-in session; a picture that cannot be fetched is left out, not shown broken. */
+  private inlineAvatar(url: string | undefined): Promise<string | undefined> {
+    if (url === undefined || url.startsWith('data:')) {
+      return Promise.resolve(url);
+    }
+    const known = this.avatars.get(url);
+    if (known !== undefined) {
+      return known;
+    }
+    const loading = this.options
+      .http({ url, method: HttpMethod.GET, headers: { [CLIENT_VERSION_HEADER]: this.options.clientVersion, ...credentialHeaders(this.options.credential) } })
+      .then(toAvatarDataUri)
+      .catch(() => undefined);
+    this.avatars.set(url, loading);
+    void loading.then((uri) => {
+      if (uri === undefined) {
+        this.avatars.delete(url);
+      }
+    });
+    return loading;
+  }
+
+  private async toAuthor(user: GraphQLUserFields | null): Promise<PageAuthor | undefined> {
     if (user === null) {
       return undefined;
     }
@@ -436,7 +481,7 @@ export class AffineClient {
     if (name === undefined || name.length === 0) {
       return undefined;
     }
-    return { name, avatarUrl: resolveAssetUrl(this.options.serverUrl, user.avatarUrl) };
+    return { name, avatarUrl: await this.inlineAvatar(resolveAssetUrl(this.options.serverUrl, user.avatarUrl)) };
   }
 
   private async loadFolderRecords(workspaceId: string): Promise<readonly FolderRecord[]> {

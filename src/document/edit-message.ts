@@ -5,6 +5,8 @@ export interface EditBlockRequest {
   readonly kind: 'edit';
   readonly blockId: string;
   readonly text: string;
+  /** The block is code, which keeps its line breaks. */
+  readonly multiline: boolean;
 }
 
 export interface AppendParagraphRequest {
@@ -33,7 +35,7 @@ export function parseEditMessage(message: unknown): EditRequest | undefined {
   }
   if (type === DocumentPanelMessageType.EDIT_BLOCK) {
     const blockId = message['blockId'];
-    return typeof blockId === 'string' && BLOCK_ID.test(blockId) ? { kind: 'edit', blockId, text } : undefined;
+    return typeof blockId === 'string' && BLOCK_ID.test(blockId) ? { kind: 'edit', blockId, text, multiline: message['multiline'] === true } : undefined;
   }
   if (type === DocumentPanelMessageType.APPEND_PARAGRAPH) {
     return text.length > 0 ? { kind: 'append', text } : undefined;

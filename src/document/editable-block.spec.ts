@@ -1,7 +1,7 @@
 import { PageBlockKind } from '../utils/enums/page-block-kind.enum';
 import { PageListKind } from '../utils/enums/page-list-kind.enum';
 import type { PageBlock, PageInlineSpan } from '../yjs/parse-page-doc';
-import { editableTextOf } from './editable-block';
+import { editableCellsOf, editableTextOf } from './editable-block';
 
 function span(overrides: Partial<PageInlineSpan> = {}): PageInlineSpan {
   return { text: 'hello', bold: false, italic: false, strike: false, underline: false, code: false, link: undefined, mentionUserId: undefined, linkedDocId: undefined, ...overrides };
@@ -25,11 +25,16 @@ describe('editableTextOf', () => {
     ['underline', { underline: true }],
     ['code', { code: true }],
     ['a link', { link: 'https://example.com' }],
-    ['a mention', { mentionUserId: 'u1' }],
-    ['a linked page', { linkedDocId: 'd1' }],
     ['a colour', { color: 'var(--affine-text-color-red)' }],
     ['a highlight', { background: 'var(--affine-text-highlight-yellow)' }],
-  ])('is not editable inline when it contains %s, so formatting is never lost', (_name, overrides) => {
+  ])('is editable inline when it contains %s, because the shown text is the stored text', (_name, overrides) => {
+    expect(editableTextOf(paragraph([span({ text: 'a ' }), span({ ...overrides, text: 'b' })]))).toEqual({ blockId: 'b1', text: 'a b' });
+  });
+
+  it.each([
+    ['a mention', { mentionUserId: 'u1' }],
+    ['a linked page', { linkedDocId: 'd1' }],
+  ])('is not editable inline when it contains %s, because the shown text is not the stored text', (_name, overrides) => {
     expect(editableTextOf(paragraph([span(), span(overrides)]))).toBeUndefined();
   });
 
@@ -43,8 +48,32 @@ describe('editableTextOf', () => {
     expect(editableTextOf({ kind: PageBlockKind.LIST, list: PageListKind.BULLETED, checked: false, depth: 0, blockId: 'l', inlines: [span({ text: 'One' })] })).toEqual({ blockId: 'l', text: 'One' });
   });
 
+  it('covers code blocks, which keep their lines', () => {
+    expect(editableTextOf({ kind: PageBlockKind.CODE, language: 'ts', text: 'a\nb', blockId: 'c' })).toEqual({ blockId: 'c', text: 'a\nb', multiline: true });
+    expect(editableTextOf({ kind: PageBlockKind.CODE, language: 'ts', text: 'x' })).toBeUndefined();
+  });
+
   it('does not cover blocks that are not text', () => {
     expect(editableTextOf({ kind: PageBlockKind.DIVIDER })).toBeUndefined();
-    expect(editableTextOf({ kind: PageBlockKind.CODE, language: 'ts', text: 'x' })).toBeUndefined();
+  });
+});
+
+describe('editableCellsOf', () => {
+  it('pairs every cell with its id and text', () => {
+    expect(editableCellsOf({ kind: PageBlockKind.TABLE, rows: [['A', 'B'], ['C']], cellIds: [['a', 'b'], ['c']] })).toEqual([
+      [
+        { blockId: 'a', text: 'A' },
+        { blockId: 'b', text: 'B' },
+      ],
+      [{ blockId: 'c', text: 'C' }],
+    ]);
+  });
+
+  it('leaves a cell read-only when its id is missing', () => {
+    expect(editableCellsOf({ kind: PageBlockKind.TABLE, rows: [['A', 'B']], cellIds: [['a']] })).toEqual([[{ blockId: 'a', text: 'A' }, undefined]]);
+  });
+
+  it('is read-only everywhere for a table without ids', () => {
+    expect(editableCellsOf({ kind: PageBlockKind.TABLE, rows: [['A']] })).toEqual([[undefined]]);
   });
 });

@@ -70,6 +70,11 @@ function graphqlErrorCode(errors: readonly GraphQLErrorBody[]): AffineErrorCode 
   return AffineErrorCode.GRAPHQL_ERROR;
 }
 
+/** A mutation changes data, so it must never be sent twice; a query only reads. */
+export function isMutation(query: string): boolean {
+  return /^\s*(?:#[^\n]*\n\s*)*mutation\b/iu.test(query);
+}
+
 export class GraphQLClient {
   public constructor(private readonly options: GraphQLClientOptions) {}
 
@@ -107,6 +112,7 @@ export class GraphQLClient {
         [CLIENT_VERSION_HEADER]: this.options.clientVersion,
         ...credentialHeaders(this.options.credential),
       },
+      safeToRepeat: !isMutation(input.query),
       body: JSON.stringify({
         query: input.query,
         variables: input.variables === undefined ? {} : input.variables,

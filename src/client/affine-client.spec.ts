@@ -31,6 +31,10 @@ function binaryResponse(status: number, bodyBytes: Uint8Array): HttpResponse {
   };
 }
 
+function imageResponse(status = 200): HttpResponse {
+  return { status, headers: new Map([['content-type', 'image/png']]), setCookie: [], body: '', bodyBytes: new Uint8Array([1, 2, 3]) };
+}
+
 interface EncodeWorkspaceRootPageInput {
   readonly id: string;
   readonly title: string;
@@ -159,6 +163,7 @@ describe('AffineClient', () => {
       jsonResponse(200, {
         data: { currentUser: { id: 'u1', email: 'owner@example.com', name: 'Admin', avatarUrl: '/api/avatars/u1' } },
       }),
+      imageResponse(),
     ]);
     const affine = new AffineClient({
       serverUrl: 'https://affine.example',
@@ -171,8 +176,14 @@ describe('AffineClient', () => {
       id: 'u1',
       email: 'owner@example.com',
       name: 'Admin',
-      avatarUrl: 'https://affine.example/api/avatars/u1',
+      avatarUrl: 'data:image/png;base64,AQID',
     });
+  });
+
+  it('leaves a picture out when it cannot be fetched, instead of showing it broken', async () => {
+    const { client } = createFakeHttp([jsonResponse(200, { data: { currentUser: { id: 'u1', email: 'owner@example.com', name: 'Admin', avatarUrl: '/api/avatars/u1' } } }), imageResponse(404)]);
+    const affine = new AffineClient({ serverUrl: 'https://affine.example', clientVersion: '0.25.0', http: client, credential: { kind: AffineCredentialKind.ACCESS_TOKEN, token: 'sk' } });
+    expect((await affine.currentUser()).avatarUrl).toBeUndefined();
   });
 
   it('paginates documents until hasNextPage is false', async () => {
@@ -354,6 +365,8 @@ describe('AffineClient', () => {
   it('falls back to GraphQL docs when the root document cannot be loaded', async () => {
     const { client } = createFakeHttp([
       binaryResponse(404, new Uint8Array()),
+      // the folders document is requested together with the root, so it takes the next answer
+      binaryResponse(404, new Uint8Array()),
       jsonResponse(200, {
         data: {
           workspace: {
@@ -423,6 +436,7 @@ describe('AffineClient', () => {
           },
         },
       }),
+      imageResponse(),
     ]);
     const affine = new AffineClient({
       serverUrl: 'https://affine.example',
@@ -443,7 +457,7 @@ describe('AffineClient', () => {
           },
         ],
       },
-      createdBy: { name: 'Ada', avatarUrl: 'https://affine.example/api/avatars/a' },
+      createdBy: { name: 'Ada', avatarUrl: 'data:image/png;base64,AQID' },
       updatedBy: { name: 'Sara', avatarUrl: undefined },
       mentionPeople: {},
     });

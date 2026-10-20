@@ -15,6 +15,7 @@ import { AffineSidebarView } from './sidebar-view';
 import { CatalogCache, CATALOG_TTL_MS } from '../sync/catalog-cache';
 import type { CachedCatalogWorkspace } from '../sidebar/load-catalog';
 import { AffineStatusBar } from './status-bar';
+import { GlobalStateSnapshotStore } from './tree-snapshot-store';
 import { AFFINE_TREE_VIEW_ID, AffineTreeProvider } from './tree-provider';
 
 export function activateAffine(context: vscode.ExtensionContext): void {
@@ -35,7 +36,15 @@ export function activateAffine(context: vscode.ExtensionContext): void {
     },
   });
   const statusBar = new AffineStatusBar();
-  const tree = new AffineTreeProvider(auth);
+  const tree = new AffineTreeProvider(
+    auth,
+    new GlobalStateSnapshotStore(context.globalState),
+    () => settings.read().serverUrl,
+    (message) => {
+      output.appendLine(message);
+      vscode.window.setStatusBarMessage(message, 10_000);
+    }
+  );
   const catalogCache = new CatalogCache<CachedCatalogWorkspace>(CATALOG_TTL_MS);
   const sidebar = new AffineSidebarView({
     auth,
@@ -111,7 +120,9 @@ export function activateAffine(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('affine.forceReload', () => {
       catalogCache.invalidate();
       void closeAffineDocumentPanels();
-      tree.refresh();
+      void tree.resetSaved().then(() => {
+        tree.refresh();
+      });
       void statusBar.refresh(auth);
       if (legacySidebar()) {
         void sidebar.forceReload();
