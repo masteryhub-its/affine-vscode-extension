@@ -72,12 +72,14 @@ describe('SocketAffineSync', () => {
     expect(config.auth.token).toBe('tok');
   });
 
-  it('reports a failed connection as a sync error and closes the socket', async () => {
+  it('reports a connection that keeps failing as a sync error and closes the socket', async () => {
     const socket = fakeSocket([], false);
     useSocket(socket);
-    const pending = new SocketAffineSync(OPTIONS).pushDocUpdate(UPDATE);
-    await Promise.resolve();
-    socket.fire('connect_error', new Error('websocket error'));
+    const pending = new SocketAffineSync(OPTIONS, { sleep: () => Promise.resolve() }).pushDocUpdate(UPDATE);
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await new Promise((resolve) => setImmediate(resolve));
+      socket.fire('connect_error', new Error('websocket error'));
+    }
     await expect(pending).rejects.toMatchObject({ code: AffineErrorCode.SYNC_ERROR, message: 'websocket error' });
     expect(socket.disconnect).toHaveBeenCalled();
     expect(socket.emitWithAck).not.toHaveBeenCalled();
@@ -110,5 +112,46 @@ describe('SocketAffineSync', () => {
     useSocket(socket);
     await expect(new SocketAffineSync(OPTIONS).pushDocUpdate(UPDATE)).rejects.toThrow('timed out');
     expect(socket.disconnect).toHaveBeenCalledTimes(1);
+  });
+
+  describe('connection retries', () => {
+    const noWait = (): Promise<void> => Promise.resolve();
+
+    it('tries again when the connection fails, because nothing has been written yet', async () => {
+      const failing = fakeSocket([], false);
+      const second = fakeSocket([], false);
+      const third = fakeSocket([{ data: { success: true } }, { data: { accepted: true } }]);
+      (io as unknown as jest.Mock).mockReturnValueOnce(failing).mockReturnValueOnce(second).mockReturnValueOnce(third);
+      const pending = new SocketAffineSync(OPTIONS, { sleep: noWait }).pushDocUpdate(UPDATE);
+      await new Promise((resolve) => setImmediate(resolve));
+      failing.fire('connect_error', new Error('timeout'));
+      await new Promise((resolve) => setImmediate(resolve));
+      second.fire('connect_error', new Error('timeout'));
+      await pending;
+      expect((io as unknown as jest.Mock).mock.calls).toHaveLength(3);
+      expect(third.emitWithAck.mock.calls.map((call) => call[0])).toEqual(['space:join', 'space:push-doc-update']);
+      expect(failing.disconnect).toHaveBeenCalled();
+    });
+
+    it('gives up after three failed connections', async () => {
+      const sockets = [fakeSocket([], false), fakeSocket([], false), fakeSocket([], false)];
+      for (const socket of sockets) {
+        (io as unknown as jest.Mock).mockReturnValueOnce(socket);
+      }
+      const pending = new SocketAffineSync(OPTIONS, { sleep: noWait }).pushDocUpdate(UPDATE);
+      for (const socket of sockets) {
+        await new Promise((resolve) => setImmediate(resolve));
+        socket.fire('connect_error', new Error('timeout'));
+      }
+      await expect(pending).rejects.toMatchObject({ code: AffineErrorCode.SYNC_ERROR });
+      expect((io as unknown as jest.Mock).mock.calls).toHaveLength(3);
+    });
+
+    it('does not repeat a push that was acknowledged with an error', async () => {
+      const socket = fakeSocket([{ data: { success: true } }, { error: { message: 'rejected' } }]);
+      useSocket(socket);
+      await expect(new SocketAffineSync(OPTIONS, { sleep: noWait }).pushDocUpdate(UPDATE)).rejects.toThrow('rejected');
+      expect((io as unknown as jest.Mock).mock.calls).toHaveLength(1);
+    });
   });
 });

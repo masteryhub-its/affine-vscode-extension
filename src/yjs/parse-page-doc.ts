@@ -24,22 +24,30 @@ export interface PageInlineSpan {
 }
 
 export interface HeadingPageBlock {
+  /** The block's id in the document, used to say which block an inline edit applies to. */
+  readonly blockId?: string;
   readonly kind: PageBlockKind.HEADING;
   readonly level: HeadingLevel;
   readonly inlines: readonly PageInlineSpan[];
 }
 
 export interface ParagraphPageBlock {
+  /** The block's id in the document, used to say which block an inline edit applies to. */
+  readonly blockId?: string;
   readonly kind: PageBlockKind.PARAGRAPH;
   readonly inlines: readonly PageInlineSpan[];
 }
 
 export interface QuotePageBlock {
+  /** The block's id in the document, used to say which block an inline edit applies to. */
+  readonly blockId?: string;
   readonly kind: PageBlockKind.QUOTE;
   readonly inlines: readonly PageInlineSpan[];
 }
 
 export interface ListPageBlock {
+  /** The block's id in the document, used to say which block an inline edit applies to. */
+  readonly blockId?: string;
   readonly kind: PageBlockKind.LIST;
   readonly list: PageListKind;
   readonly checked: boolean;
@@ -298,11 +306,11 @@ function walk(blocks: Y.Map<unknown>, id: string, depth: number, visiting: Set<s
     const inlines = readInlines(value);
     const level = paragraphType === undefined ? undefined : headingLevel(paragraphType);
     if (level !== undefined) {
-      out.push({ kind: PageBlockKind.HEADING, level, inlines });
+      out.push({ kind: PageBlockKind.HEADING, level, inlines, blockId: id });
     } else if (paragraphType === AffineParagraphType.QUOTE) {
-      out.push({ kind: PageBlockKind.QUOTE, inlines });
+      out.push({ kind: PageBlockKind.QUOTE, inlines, blockId: id });
     } else {
-      out.push({ kind: PageBlockKind.PARAGRAPH, inlines });
+      out.push({ kind: PageBlockKind.PARAGRAPH, inlines, blockId: id });
     }
     return;
   }
@@ -313,6 +321,7 @@ function walk(blocks: Y.Map<unknown>, id: string, depth: number, visiting: Set<s
       checked: value.get('prop:checked') === true,
       depth,
       inlines: readInlines(value),
+      blockId: id,
     });
     for (const child of readChildren(value)) {
       walk(blocks, child, depth + 1, visiting, out);

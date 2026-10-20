@@ -1,4 +1,4 @@
-import type { ParsedPage } from '../yjs/parse-page-doc';
+import type { PageInlineSpan, ParsedPage } from '../yjs/parse-page-doc';
 import { renderPageErrorHtml, renderPageHtml, renderPageLoadingHtml } from './render-page-html';
 import { PageBlockKind } from '../utils/enums/page-block-kind.enum';
 import { PageListKind } from '../utils/enums/page-list-kind.enum';
@@ -364,6 +364,86 @@ describe('renderPageHtml', () => {
 
     it('uses no hard-coded hex colours in the markup', () => {
       expect(render([heading(2, 'A'), text('b'), heading(2, 'C')])).not.toMatch(/#[0-9a-fA-F]{6}\b/u);
+    });
+  });
+
+  describe('inline editing', () => {
+    const plain = { bold: false, italic: false, strike: false, underline: false, code: false, link: undefined, mentionUserId: undefined, linkedDocId: undefined };
+    const run = (value: string, extra: Partial<typeof plain> & { link?: string } = {}): readonly PageInlineSpan[] => [{ text: value, ...plain, ...extra }];
+    const blocks: ParsedPage['blocks'] = [
+      { kind: PageBlockKind.HEADING, level: 2, blockId: 'h1', inlines: run('Goals') },
+      { kind: PageBlockKind.PARAGRAPH, blockId: 'p1', inlines: run('Plain <text>') },
+      { kind: PageBlockKind.PARAGRAPH, blockId: 'p2', inlines: run('Bold one', { bold: true }) },
+      { kind: PageBlockKind.LIST, list: PageListKind.BULLETED, checked: false, depth: 0, blockId: 'l1', inlines: run('Item') },
+      { kind: PageBlockKind.QUOTE, blockId: 'q1', inlines: run('Said') },
+      { kind: PageBlockKind.CODE, language: 'ts', text: 'x' },
+      { kind: PageBlockKind.DIVIDER },
+    ];
+    const render = (editable: boolean, parsed: ParsedPage = page({ title: 'T', blocks })): string => renderPageHtml({ page: parsed, fallbackTitle: 'T', url, nonce, cspSource, editable });
+
+    it('is read-only unless editing is switched on', () => {
+      const html = render(false);
+      expect(html).not.toContain('contenteditable');
+      expect(html).not.toContain('data-block=');
+      expect(html).toContain('Read-only');
+    });
+
+    it('lets plain text blocks be edited where they are', () => {
+      const html = render(true);
+      for (const id of ['h1', 'p1', 'l1', 'q1']) {
+        expect(html).toContain(`data-block="${id}"`);
+      }
+      expect(html).toContain('contenteditable="plaintext-only"');
+      expect(html).toContain('class="editable"');
+    });
+
+    it('does not offer inline editing for a block with formatting, so it is never flattened', () => {
+      expect(render(true)).not.toContain('data-block="p2"');
+    });
+
+    it('does not offer inline editing for code or dividers', () => {
+      const html = render(true);
+      expect(html.match(/<(?:p|h\d|span|blockquote)\b[^>]*\sdata-block="/gu)?.length).toBe(4);
+    });
+
+    it('keeps the text of an editable block escaped', () => {
+      const html = render(true);
+      expect(html).toContain('Plain &lt;text&gt;');
+      expect(html).not.toContain('Plain <text>');
+    });
+
+    it('adds a place to write a new paragraph at the end', () => {
+      const html = render(true);
+      expect(html).toContain('class="editable new-block"');
+      expect(html).toContain('data-placeholder="Write something…"');
+    });
+
+    it('tells the reader they can click, and has a status line that is announced', () => {
+      const html = render(true);
+      expect(html).toContain('Click text to edit');
+      expect(html).toContain('role="status"');
+      expect(html).toContain('aria-live="polite"');
+      expect(html).not.toContain('Read-only');
+    });
+
+    it('sends edits as messages and listens for the result', () => {
+      const html = render(true);
+      expect(html).toContain("type: 'editBlock'");
+      expect(html).toContain("type: 'appendParagraph'");
+      expect(html).toContain("addEventListener('message'");
+    });
+
+    it('does not offer to write on a canvas page', () => {
+      const html = render(true, page({ title: 'T', edgelessOnly: true, blocks: [] }));
+      expect(html).not.toContain('class="editable new-block"');
+      expect(html).not.toContain('contenteditable="plaintext-only"');
+    });
+
+    it('cancels with Escape and saves with Enter or when focus leaves', () => {
+      const html = render(true);
+      expect(html).toContain("event.key === 'Escape'");
+      expect(html).toContain("event.key === 'Enter'");
+      expect(html).toContain("addEventListener('blur'");
     });
   });
 });

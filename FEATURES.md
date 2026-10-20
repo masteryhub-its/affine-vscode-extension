@@ -27,7 +27,7 @@ This client talks to **self-hosted AFFiNE** or **AFFiNE Cloud** over GraphQL, RE
 
 ## Page preview layout
 
-- A top bar with a Read-only marker, **Copy link** and **Open in AFFiNE**
+- A top bar with a save status, **Copy link** and **Open in AFFiNE**
 - An "On this page" outline for pages with two or more headings
 - To-do items keep the checkbox on the same row as the text and strike through done items; numbered lists count 1, 2, 3
 - Code blocks show their language and have a Copy button
@@ -86,7 +86,16 @@ Hidden from the palette (use the tree or sidebar): **Move to Folder**, **Move to
 
 ## Local preview
 
-Click a page (or open it from Search / Open Document) for a **read-only** preview built from the Yjs snapshot. This works when the server indexer is off.
+Click a page (or open it from Search / Open Document) for a preview built from the Yjs snapshot. This works when the server indexer is off.
+
+### Editing in place
+
+- Click any plain paragraph, heading, quote or list item to edit it where it is. Press **Enter** or click away to save, **Escape** to cancel
+- Click the empty line at the bottom to write a new paragraph
+- Only the characters you change are sent, so edits made in AFFiNE at the same time are kept
+- A block with bold, italic, a link, a mention or colour is not editable here, so formatting is never flattened; the page says to edit it in AFFiNE
+- Not supported here: formatting, slash commands, moving or deleting blocks, tables, code and whiteboards
+- A save that fails puts your previous text back and shows the reason in the top bar
 
 **Chrome**
 

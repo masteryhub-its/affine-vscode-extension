@@ -17,7 +17,7 @@ Product plan for the VS Code / Cursor client. **Shipped behavior** is in [FEATUR
 
 | Works in VS Code | Still need the browser for |
 | --- | --- |
-| Sign in, browse workspaces, Organize folders, favorites, collections, recents | In-editor body editing |
+| Sign in, browse workspaces, Organize folders, favorites, collections, recents | Rich-text formatting, slash commands |
 | Read-only preview (headings, lists, mentions, tables, callouts, images, attachments) | Databases, whiteboard, embeds |
 | Search (title + ranked full-text) | Live collab cursors |
 | New page/folder, rename, duplicate, move, trash, restore | Permanent delete (use AFFiNE trash semantics) |
@@ -28,7 +28,7 @@ Product plan for the VS Code / Cursor client. **Shipped behavior** is in [FEATUR
 | Milestone | Minimum bar for “install this” |
 | --- | --- |
 | **v1.0 (now)** | Marketplace / Open VSX + screenshots + catalog smoke — install from the editor when the listing is live. |
-| **Never (by design)** | In-editor rich-text editing of Yjs bodies — use AFFiNE web. |
+| **Never (by design)** | Rich-text formatting and block layout editing of Yjs bodies — use AFFiNE web. Plain-text editing in place is supported. |
 
 **Recommendation:** Install for sidebar + preview + links. Do not expect an AFFiNE replacement inside VS Code.
 
@@ -137,7 +137,7 @@ Only after v1.0 and proven server API stability. Not committed.
 
 These stay out of scope by design (also in [FEATURES.md](./FEATURES.md)):
 
-- **In-editor rich-text editing** of Yjs page bodies (CRDT conflict surface, not Markdown files)
+- **Rich-text formatting and block layout editing** of Yjs page bodies (plain-text edits and new paragraphs are supported)
 - **Whiteboard / edgeless editor** inside VS Code
 - **Embedding** AFFiNE web app in webview iframe or Simple Browser
 - **OAuth (Google/GitHub)** as primary sign-in unless officially supported for extensions

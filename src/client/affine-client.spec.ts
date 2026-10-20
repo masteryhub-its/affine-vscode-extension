@@ -401,6 +401,7 @@ describe('AffineClient', () => {
       blocks: [
         {
           kind: PageBlockKind.PARAGRAPH,
+          blockId: 'p1',
           inlines: [{ text: 'Hello', bold: false, italic: false, strike: false, underline: false, code: false, link: undefined, mentionUserId: undefined, linkedDocId: undefined }],
         },
       ],
@@ -437,6 +438,7 @@ describe('AffineClient', () => {
         blocks: [
           {
             kind: PageBlockKind.PARAGRAPH,
+            blockId: 'p1',
             inlines: [{ text: 'Hello', bold: false, italic: false, strike: false, underline: false, code: false, link: undefined, mentionUserId: undefined, linkedDocId: undefined }],
           },
         ],

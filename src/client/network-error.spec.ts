@@ -1,4 +1,4 @@
-import { describeNetworkFailure } from './network-error';
+import { classifyNetworkFailure, describeNetworkFailure } from './network-error';
 
 function fetchFailed(code: string): TypeError {
   return Object.assign(new TypeError('fetch failed'), { cause: Object.assign(new Error('boom'), { code }) });
@@ -37,5 +37,26 @@ describe('describeNetworkFailure', () => {
 
   it('tells the user which setting to check', () => {
     expect(describeNetworkFailure(fetchFailed('ENOTFOUND'), 'https://server.example', 'my.setting')).toContain('my.setting');
+  });
+});
+
+describe('classifyNetworkFailure', () => {
+  it.each(['UND_ERR_CONNECT_TIMEOUT', 'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'EHOSTUNREACH', 'ENETUNREACH'])('treats %s as a failure before anything was sent', (code) => {
+    expect(classifyNetworkFailure(fetchFailed(code))).toBe('before-connect');
+  });
+
+  it.each(['ECONNRESET', 'ETIMEDOUT'])('treats %s as possibly after the request was sent', (code) => {
+    expect(classifyNetworkFailure(fetchFailed(code))).toBe('ambiguous');
+  });
+
+  it.each(['CERT_HAS_EXPIRED', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'SOMETHING_ELSE'])('does not treat %s as worth retrying', (code) => {
+    expect(classifyNetworkFailure(fetchFailed(code))).toBe('other');
+  });
+
+  it('finds the code inside an AggregateError and ignores non-errors', () => {
+    const aggregate = new AggregateError([Object.assign(new Error('a'), { code: 'UND_ERR_CONNECT_TIMEOUT' })], 'x');
+    expect(classifyNetworkFailure(Object.assign(new TypeError('fetch failed'), { cause: aggregate }))).toBe('before-connect');
+    expect(classifyNetworkFailure(undefined)).toBe('other');
+    expect(classifyNetworkFailure('text')).toBe('other');
   });
 });

@@ -18,7 +18,7 @@ The sibling [Plane VS Code client](https://github.com/masteryhub-its/plane-vscod
 
 ![AFFiNE sidebar with Organize folders next to the editor](media/screenshots/sidebar.png)
 
-![Read-only page preview with tables, callouts, and mentions](media/screenshots/preview.png)
+![Page preview with tables, callouts, and mentions](media/screenshots/preview.png)
 
 ![Sign in with an access token or email and password](media/screenshots/signin.png)
 
@@ -74,7 +74,7 @@ Full catalog (including preview coverage and non-goals): **[FEATURES.md](./FEATU
 
 ### Local preview
 
-Click a page (or a search / Open Document hit) to open a **read-only** preview in the editor (from Yjs — works when the server indexer is off):
+Click a page (or a search / Open Document hit) to open a preview in the editor, where you can edit plain text blocks and add paragraphs in place (from Yjs — works when the server indexer is off):
 
 - Title, tags, creator, and last editor (deduped when they are the same person), with avatars
 - Headings 1–6, paragraphs, quotes, bullets, numbered lists, and to-do checkboxes

@@ -1,5 +1,5 @@
 import * as Y from 'yjs';
-import { parsePageDoc } from './parse-page-doc';
+import { parsePageDoc, type PageBlock, type ParsedPage } from './parse-page-doc';
 import { PageBlockKind } from '../utils/enums/page-block-kind.enum';
 import { PageListKind } from '../utils/enums/page-list-kind.enum';
 
@@ -97,6 +97,11 @@ function encodePage(blocks: readonly EncodeBlockInput[]): Uint8Array {
   return Y.encodeStateAsUpdate(doc);
 }
 
+function parseWithoutIds(bin: Uint8Array): ParsedPage {
+  const parsed = parsePageDoc(bin);
+  return { ...parsed, blocks: parsed.blocks.map((block) => Object.fromEntries(Object.entries(block).filter(([key]) => key !== 'blockId')) as unknown as PageBlock) };
+}
+
 describe('parsePageDoc', () => {
   it('reads the page title and paragraph inlines including bold', () => {
     const bin = encodePage([
@@ -105,7 +110,7 @@ describe('parsePageDoc', () => {
       { id: 'p1', flavour: 'affine:paragraph', type: 'text', text: 'Hello world', boldStart: 6, boldLength: 5 },
     ]);
 
-    expect(parsePageDoc(bin)).toEqual({
+    expect(parseWithoutIds(bin)).toEqual({
       title: 'Standup',
       edgelessOnly: false,
       blocks: [
@@ -135,7 +140,7 @@ describe('parsePageDoc', () => {
       },
     ]);
 
-    expect(parsePageDoc(bin)).toEqual({
+    expect(parseWithoutIds(bin)).toEqual({
       title: 'Standup',
       edgelessOnly: false,
       blocks: [
@@ -177,7 +182,7 @@ describe('parsePageDoc', () => {
       { id: 'd', flavour: 'affine:divider' },
     ]);
 
-    const parsed = parsePageDoc(bin);
+    const parsed = parseWithoutIds(bin);
     expect(parsed.blocks.map((block) => block.kind)).toEqual(['heading', 'quote', 'list', 'list', 'code', 'divider']);
     expect(parsed.blocks).toEqual(
       expect.arrayContaining([
@@ -199,7 +204,7 @@ describe('parsePageDoc', () => {
       { id: 'p', flavour: 'affine:paragraph', type: 'text', text: 'Visible' },
     ]);
 
-    expect(parsePageDoc(bin).blocks).toEqual([
+    expect(parseWithoutIds(bin).blocks).toEqual([
       {
         kind: PageBlockKind.PARAGRAPH,
         inlines: [{ text: 'Visible', bold: false, italic: false, strike: false, underline: false, code: false, link: undefined, mentionUserId: undefined, linkedDocId: undefined }],
@@ -213,7 +218,7 @@ describe('parsePageDoc', () => {
       { id: 'canvas', flavour: 'affine:surface', children: [] },
     ]);
 
-    expect(parsePageDoc(bin)).toEqual({
+    expect(parseWithoutIds(bin)).toEqual({
       title: 'Board',
       edgelessOnly: true,
       blocks: [],
@@ -257,7 +262,7 @@ describe('parsePageDoc', () => {
     paragraph.set('sys:children', new Y.Array<string>());
     root.set('p', paragraph);
 
-    expect(parsePageDoc(Y.encodeStateAsUpdate(doc)).blocks).toEqual([
+    expect(parseWithoutIds(Y.encodeStateAsUpdate(doc)).blocks).toEqual([
       {
         kind: PageBlockKind.PARAGRAPH,
         inlines: [
@@ -300,7 +305,7 @@ describe('parsePageDoc', () => {
     paragraph.set('sys:children', new Y.Array<string>());
     root.set('p', paragraph);
 
-    expect(parsePageDoc(Y.encodeStateAsUpdate(doc)).blocks).toEqual([
+    expect(parseWithoutIds(Y.encodeStateAsUpdate(doc)).blocks).toEqual([
       {
         kind: PageBlockKind.PARAGRAPH,
         inlines: [
@@ -318,7 +323,7 @@ describe('parsePageDoc', () => {
       { id: 'note', flavour: 'affine:note', children: ['link'] },
       { id: 'link', flavour: 'affine:embed-linked-doc', pageId: 'doc-42', title: 'API Handbook' },
     ]);
-    expect(parsePageDoc(bin).blocks).toEqual([{ kind: PageBlockKind.LINKED_DOC, docId: 'doc-42', title: 'API Handbook' }]);
+    expect(parseWithoutIds(bin).blocks).toEqual([{ kind: PageBlockKind.LINKED_DOC, docId: 'doc-42', title: 'API Handbook' }]);
   });
 
   it('reads tables, callouts, attachments, and image source ids', () => {
@@ -334,7 +339,7 @@ describe('parsePageDoc', () => {
       { id: 'file', flavour: 'affine:attachment', name: 'spec.pdf', size: '12kb', sourceId: 'blob-1' },
       { id: 'img', flavour: 'affine:image', caption: 'Diagram', sourceId: 'blob-2' },
     ]);
-    expect(parsePageDoc(bin).blocks).toEqual([
+    expect(parseWithoutIds(bin).blocks).toEqual([
       { kind: PageBlockKind.TABLE, rows: [['Name', 'Status']] },
       {
         kind: PageBlockKind.CALLOUT,
@@ -344,5 +349,34 @@ describe('parsePageDoc', () => {
       { kind: PageBlockKind.ATTACHMENT, name: 'spec.pdf', size: '12kb', sourceId: 'blob-1' },
       { kind: PageBlockKind.IMAGE, caption: 'Diagram', sourceId: 'blob-2' },
     ]);
+  });
+
+  it('gives each text block the id it has in the document, so the preview can say which block was edited', () => {
+    const doc = new Y.Doc();
+    const blocks = doc.getMap('blocks');
+    const add = (id: string, flavour: string, children: readonly string[], extra: Record<string, unknown> = {}): void => {
+      const block = new Y.Map<unknown>();
+      block.set('sys:id', id);
+      block.set('sys:flavour', flavour);
+      const kids = new Y.Array<string>();
+      kids.push([...children]);
+      block.set('sys:children', kids);
+      for (const [key, value] of Object.entries(extra)) {
+        block.set(key, value);
+      }
+      blocks.set(id, block);
+    };
+    const text = (value: string): Y.Text => {
+      const t = new Y.Text();
+      t.insert(0, value);
+      return t;
+    };
+    add('page', 'affine:page', ['note']);
+    add('note', 'affine:note', ['para', 'head', 'item']);
+    add('para', 'affine:paragraph', [], { 'prop:type': 'text', 'prop:text': text('Body') });
+    add('head', 'affine:paragraph', [], { 'prop:type': 'h2', 'prop:text': text('Title') });
+    add('item', 'affine:list', [], { 'prop:type': 'bulleted', 'prop:text': text('Point') });
+    const parsed = parsePageDoc(Y.encodeStateAsUpdate(doc));
+    expect(parsed.blocks.map((block) => ('blockId' in block ? block.blockId : undefined))).toEqual(['para', 'head', 'item']);
   });
 });

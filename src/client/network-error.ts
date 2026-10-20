@@ -24,27 +24,28 @@ function asRecord(value: unknown): ErrorWithCode | undefined {
   return typeof value === 'object' && value !== null ? value : undefined;
 }
 
-function findReason(error: unknown, depth: number): string | undefined {
+function findCode(error: unknown, depth: number): string | undefined {
   const record = asRecord(error);
   if (record === undefined || depth > 4) {
     return undefined;
   }
-  if (typeof record.code === 'string') {
-    const reason = REASONS.get(record.code);
-    if (reason !== undefined) {
-      return reason;
-    }
+  if (typeof record.code === 'string' && (REASONS.has(record.code) || BEFORE_CONNECT.has(record.code) || AMBIGUOUS.has(record.code))) {
+    return record.code;
   }
   const nested = Array.isArray(record.errors) ? (record.errors as readonly unknown[]) : [];
   for (const candidate of [record.cause, ...nested]) {
-    const reason = findReason(candidate, depth + 1);
-    if (reason !== undefined) {
-      return reason;
+    const code = findCode(candidate, depth + 1);
+    if (code !== undefined) {
+      return code;
     }
   }
   return undefined;
 }
 
+function findReason(error: unknown): string | undefined {
+  const code = findCode(error, 0);
+  return code === undefined ? undefined : REASONS.get(code);
+}
 /** Turns undici's bare "fetch failed" into a sentence that says what to check. */
 export function describeNetworkFailure(error: unknown, url: string, settingName: string = 'affine.serverUrl'): string {
   let host = url;
@@ -53,6 +54,27 @@ export function describeNetworkFailure(error: unknown, url: string, settingName:
   } catch {
     // Keep the raw value when it is not a URL.
   }
-  const reason = findReason(error, 0) ?? 'a network error occurred';
+  const reason = findReason(error) ?? 'a network error occurred';
   return `Cannot reach ${host}: ${reason}. Check your network or VPN and the ${settingName} setting.`;
+}
+
+export type NetworkFailureKind = 'before-connect' | 'ambiguous' | 'other';
+
+const BEFORE_CONNECT = new Set(['UND_ERR_CONNECT_TIMEOUT', 'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'EHOSTUNREACH', 'ENETUNREACH']);
+const AMBIGUOUS = new Set(['ECONNRESET', 'ETIMEDOUT']);
+
+/**
+ * Whether a failed request is worth repeating. A failure before the connection opened never reached the server, so
+ * any request can be repeated safely. A reset or late timeout may have happened after the server acted, so only a
+ * read should be repeated. Anything else (for example a certificate problem) will not get better by waiting.
+ */
+export function classifyNetworkFailure(error: unknown): NetworkFailureKind {
+  const code = findCode(error, 0);
+  if (code === undefined) {
+    return 'other';
+  }
+  if (BEFORE_CONNECT.has(code)) {
+    return 'before-connect';
+  }
+  return AMBIGUOUS.has(code) ? 'ambiguous' : 'other';
 }

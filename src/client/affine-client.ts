@@ -5,6 +5,7 @@ import type { AffineSync } from '../sync/affine-sync';
 import { encodeCreateFolderUpdate } from '../yjs/encode-create-folder-update';
 import { encodeFolderMoveUpdate, emptyYDocBin } from '../yjs/encode-folder-move-update';
 import { encodeCreatePageMetaUpdate, encodeRenamePageUpdate, encodeRestorePageUpdate, encodeTrashPageUpdate } from '../yjs/encode-page-meta-update';
+import { encodeAppendParagraphUpdate, encodeBlockTextUpdate } from '../yjs/encode-block-edit';
 import { encodeEmptyPageDoc } from '../yjs/encode-page-doc';
 import { parseCollections } from '../organize/collections';
 import { nextOrganizeIndex } from '../organize/organize-index';
@@ -303,6 +304,29 @@ export class AffineClient {
       newRecordId: newOrganizeRecordId(),
     });
     await this.requireSync().pushDocUpdate({ workspaceId, docId: foldersId, update });
+  }
+
+  /**
+   * Sets the text of one text block of a page. The current page is fetched first and only the difference is pushed,
+   * so changes made elsewhere at the same time are kept. Returns false when the text was already that.
+   */
+  public async editBlockText(workspaceId: string, docId: string, blockId: string, text: string): Promise<boolean> {
+    const sync = this.requireSync();
+    const update = encodeBlockTextUpdate(await this.fetchWorkspaceDoc(workspaceId, docId), blockId, text);
+    if (update === undefined) {
+      return false;
+    }
+    await this.pushStep('save your edit', () => sync.pushDocUpdate({ workspaceId, docId, update }));
+    return true;
+  }
+
+  /** Adds a new text paragraph at the end of a page and returns the id of the new block. */
+  public async appendParagraph(workspaceId: string, docId: string, text: string): Promise<string> {
+    const sync = this.requireSync();
+    const blockId = crypto.randomUUID();
+    const update = encodeAppendParagraphUpdate(await this.fetchWorkspaceDoc(workspaceId, docId), text, blockId);
+    await this.pushStep('add your text', () => sync.pushDocUpdate({ workspaceId, docId, update }));
+    return blockId;
   }
 
   public async searchDocs(workspaceId: string, keyword: string): Promise<readonly AffineSearchHit[]> {

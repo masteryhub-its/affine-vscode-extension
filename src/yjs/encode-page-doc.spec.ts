@@ -14,7 +14,7 @@ describe('encodeEmptyPageDoc', () => {
     const parsed = parsePageDoc(bin);
     expect(parsed.title).toBe('New spec');
     expect(parsed.edgelessOnly).toBe(false);
-    expect(parsed.blocks).toEqual([{ kind: 'paragraph', inlines: [] }]);
+    expect(parsed.blocks).toEqual([{ kind: 'paragraph', inlines: [], blockId: 'p1' }]);
   });
 
   it('includes a surface sibling so AFFiNE can open the page', () => {

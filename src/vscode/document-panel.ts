@@ -9,6 +9,9 @@ import { DocumentPanelMessageType } from '../utils/enums/document-panel-message-
 import { parseDocumentPanelMessageType } from '../utils/document-panel-message-type';
 import { isAllowedHttpUrl } from '../utils/allowed-http-url';
 import { copyActionFromMessage } from '../document/copy-message';
+import { parseEditMessage } from '../document/edit-message';
+import { runEdit } from '../document/run-edit';
+import { createSerialQueue } from '../utils/serial-queue';
 import { showAffineInfo } from './messages';
 import { openAffineUrl } from './open-url';
 
@@ -38,6 +41,7 @@ export async function openAffineDocumentPanel(input: OpenAffineDocumentInput): P
   });
   openPanels.set(panelKey, panel);
   let disposed = false;
+  const enqueue = createSerialQueue();
   panel.onDidDispose(() => {
     disposed = true;
     openPanels.delete(panelKey);
@@ -53,6 +57,16 @@ export async function openAffineDocumentPanel(input: OpenAffineDocumentInput): P
     }
     if (isOpenExternalMessage(message)) {
       void openAffineUrl(url);
+      return;
+    }
+    const edit = parseEditMessage(message);
+    if (edit !== undefined) {
+      void enqueue(async () => {
+        const reply = await runEdit(input.client, input.workspaceId, input.docId, edit);
+        if (!disposed) {
+          await panel.webview.postMessage(reply);
+        }
+      });
       return;
     }
     const copy = copyActionFromMessage(message, url);
@@ -76,6 +90,7 @@ export async function openAffineDocumentPanel(input: OpenAffineDocumentInput): P
       createdBy: preview.createdBy,
       updatedBy: preview.updatedBy,
       mentionPeople: preview.mentionPeople,
+      editable: true,
       ...(input.tags === undefined ? {} : { tags: input.tags }),
     });
     panel.title = preview.page.title.trim().length > 0 ? preview.page.title : input.title;

@@ -10,6 +10,8 @@ Redesigned interface. Everything from 1.0.1 is included.
 - Page preview rebuilt: top bar, an outline panel, inline to-do items, correctly numbered lists, code blocks with a language label and Copy button, consistent tables, callouts and cards
 - Highlight and text colours in pages now follow the editor theme
 - One theme stylesheet built only from editor theme colours, with high contrast support
+- **Edit in place:** click a plain paragraph, heading, quote or list item to change it, press Enter or click away to save, Escape to cancel; click the empty line at the end to write a new paragraph. Only the changed characters are sent, blocks with formatting stay read-only, and a failed save restores your text
+- Requests to AFFiNE are retried (up to three attempts) when the connection itself fails, including the live-sync connection used for saving, which makes a flaky network far more reliable
 
 ## 1.0.1 — 2026-10-19
 

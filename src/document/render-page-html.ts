@@ -6,11 +6,15 @@ import { PageListKind } from '../utils/enums/page-list-kind.enum';
 import { DocumentPanelMessageType } from '../utils/enums/document-panel-message-type.enum';
 import { cspImgSrc } from '../utils/url-protocol';
 import { renderDocumentShell } from '../ui/document-shell';
+import { DocumentPanelReplyType } from '../utils/enums/document-panel-reply-type.enum';
+import { editableTextOf } from './editable-block';
 import { numberListItems } from './list-numbering';
 import { extractOutline, headingAnchorId } from './outline';
 import type { PageBlock, PageInlineSpan, ParsedPage } from '../yjs/parse-page-doc';
 
 export interface RenderPageHtmlInput {
+  /** Lets plain text blocks be edited where they are, and adds a place to write a new paragraph. */
+  readonly editable?: boolean;
   readonly page: ParsedPage;
   readonly fallbackTitle: string;
   readonly url: string;
@@ -89,6 +93,19 @@ interface BlockContext {
   readonly people: MentionPeople;
   readonly pageUrl: string;
   readonly serverUrl: string;
+  readonly editable: boolean;
+}
+
+const WRITE_PLACEHOLDER = 'Write something…';
+
+/** The attributes that make a plain text block editable in place; empty when editing is off or the block has formatting. */
+function editAttrs(block: PageBlock, context: BlockContext, baseClass?: string): string {
+  const editable = context.editable ? editableTextOf(block) : undefined;
+  const classes = baseClass === undefined ? 'editable' : `${baseClass} editable`;
+  if (editable === undefined) {
+    return baseClass === undefined ? '' : ` class="${baseClass}"`;
+  }
+  return ` class="${classes}" contenteditable="plaintext-only" spellcheck="true" role="textbox" aria-label="Edit text" data-block="${escapeHtml(editable.blockId)}" data-original="${escapeHtml(editable.text)}" data-placeholder="${WRITE_PLACEHOLDER}"`;
 }
 
 function checkboxIcon(checked: boolean): string {
@@ -101,19 +118,19 @@ function renderBlock(block: PageBlock, context: BlockContext): string {
   const { people, pageUrl, serverUrl } = context;
   switch (block.kind) {
     case PageBlockKind.HEADING:
-      return `<h${block.level} id="${headingAnchorId(context.index)}">${renderInlines(block.inlines, people, pageUrl, serverUrl)}</h${block.level}>`;
+      return `<h${block.level} id="${headingAnchorId(context.index)}"${editAttrs(block, context)}>${renderInlines(block.inlines, people, pageUrl, serverUrl)}</h${block.level}>`;
     case PageBlockKind.PARAGRAPH:
-      return `<p>${renderInlines(block.inlines, people, pageUrl, serverUrl)}</p>`;
+      return `<p${editAttrs(block, context)}>${renderInlines(block.inlines, people, pageUrl, serverUrl)}</p>`;
     case PageBlockKind.QUOTE:
-      return `<blockquote>${renderInlines(block.inlines, people, pageUrl, serverUrl)}</blockquote>`;
+      return `<blockquote${editAttrs(block, context)}>${renderInlines(block.inlines, people, pageUrl, serverUrl)}</blockquote>`;
     case PageBlockKind.LIST: {
       const indent = ` style="margin-left:${block.depth * 20}px"`;
       const inner = renderInlines(block.inlines, people, pageUrl, serverUrl);
       if (block.list === PageListKind.TODO) {
-        return `<div class="todo${block.checked ? ' done' : ''}" role="checkbox" aria-checked="${block.checked ? 'true' : 'false'}" aria-disabled="true"${indent}><span class="check" aria-hidden="true">${checkboxIcon(block.checked)}</span><span class="li-text">${inner}</span></div>`;
+        return `<div class="todo${block.checked ? ' done' : ''}" role="checkbox" aria-checked="${block.checked ? 'true' : 'false'}" aria-disabled="true"${indent}><span class="check" aria-hidden="true">${checkboxIcon(block.checked)}</span><span${editAttrs(block, context, 'li-text')}>${inner}</span></div>`;
       }
       const mark = block.list === PageListKind.NUMBERED ? `${context.number ?? 1}.` : '•';
-      return `<div class="item"${indent}><span class="mark">${mark}</span><span class="li-text">${inner}</span></div>`;
+      return `<div class="item"${indent}><span class="mark">${mark}</span><span${editAttrs(block, context, 'li-text')}>${inner}</span></div>`;
     }
     case PageBlockKind.CODE: {
       const language = block.language.trim().length > 0 ? block.language.trim() : 'text';
@@ -187,15 +204,20 @@ function renderAuthors(createdBy: PageAuthor | undefined, updatedBy: PageAuthor 
   return `<div class="authors">${parts.join('')}</div>`;
 }
 
-function renderBody(page: ParsedPage, people: MentionPeople, pageUrl: string, serverUrl: string): string {
+function newBlockRow(): string {
+  return `<p class="editable new-block" contenteditable="plaintext-only" spellcheck="true" role="textbox" aria-label="Write a new paragraph" data-new="true" data-placeholder="${WRITE_PLACEHOLDER}"></p>`;
+}
+
+function renderBody(page: ParsedPage, people: MentionPeople, pageUrl: string, serverUrl: string, editable: boolean): string {
   if (page.edgelessOnly) {
     return '<p class="muted">This page is a canvas. Open it in AFFiNE to view the whiteboard.</p>';
   }
   if (page.blocks.length === 0) {
-    return '<p class="muted">This page is empty.</p>';
+    return editable ? newBlockRow() : '<p class="muted">This page is empty.</p>';
   }
   const numbers = numberListItems(page.blocks);
-  return page.blocks.map((block, index) => renderBlock(block, { index, number: numbers[index], people, pageUrl, serverUrl })).join('\n');
+  const rendered = page.blocks.map((block, index) => renderBlock(block, { index, number: numbers[index], people, pageUrl, serverUrl, editable })).join('\n');
+  return editable ? `${rendered}\n${newBlockRow()}` : rendered;
 }
 
 function renderOutline(page: ParsedPage): string {
@@ -216,6 +238,7 @@ export interface RenderPageShellInput {
   readonly showOpen: boolean;
   /** The "On this page" panel, or empty when the page has too few headings to need one. */
   readonly outline?: string;
+  readonly editable?: boolean;
 }
 
 const PAGE_CSS = String.raw`
@@ -269,6 +292,14 @@ figure.image img { max-width: 100%; height: auto; border-radius: var(--radius); 
 figure.image figcaption { margin-top: 4px; font-size: 12px; color: var(--muted); }
 .page-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
 .page-tag { padding: 1px 8px; border-radius: 10px; font-size: 11px; color: var(--vscode-badge-foreground); background: var(--vscode-badge-background); }
+.editable { border-radius: 3px; outline: none; cursor: text; }
+.editable:hover { background: var(--subtle); }
+.editable:focus { background: var(--subtle); box-shadow: 0 0 0 1px var(--vscode-focusBorder); }
+.editable:empty::before { content: attr(data-placeholder); color: var(--muted); }
+.editable[aria-busy='true'] { opacity: 0.6; }
+.new-block { min-height: 1.6em; margin-top: 12px; }
+.save-status { font-size: 12px; }
+.save-status.error { color: var(--vscode-errorForeground); }
 mark.highlight { padding: 0 2px; border-radius: 2px; color: inherit; }
 :root {
   --affine-text-highlight-red: color-mix(in srgb, var(--vscode-charts-red) 30%, transparent);
@@ -327,10 +358,91 @@ const SCRIPT = `
       post({ type: '${DocumentPanelMessageType.OPEN_HREF}', href: link.getAttribute('href') });
     });`;
 
+const EDIT_SCRIPT = `
+    const statusLine = document.querySelector('.save-status');
+    const setStatus = (text, failed) => {
+      if (!statusLine) return;
+      statusLine.textContent = text;
+      statusLine.classList.toggle('error', Boolean(failed));
+    };
+    const oneLine = (value) => value.replace(/\\s*[\\r\\n]+\\s*/g, ' ');
+    const wire = (el) => {
+      el.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+          event.preventDefault();
+          el.blur();
+        } else if (event.key === 'Escape') {
+          el.textContent = el.dataset.original || '';
+          el.dataset.skip = '1';
+          el.blur();
+        }
+      });
+      el.addEventListener('blur', () => {
+        if (el.dataset.skip === '1') {
+          delete el.dataset.skip;
+          return;
+        }
+        const text = oneLine(el.textContent || '');
+        if (el.hasAttribute('data-new')) {
+          if (text.trim().length === 0) {
+            el.textContent = '';
+            return;
+          }
+          setStatus('Saving…');
+          el.setAttribute('aria-busy', 'true');
+          post({ type: '${DocumentPanelMessageType.APPEND_PARAGRAPH}', text });
+          return;
+        }
+        if (text === (el.dataset.original || '')) return;
+        setStatus('Saving…');
+        el.setAttribute('aria-busy', 'true');
+        post({ type: '${DocumentPanelMessageType.EDIT_BLOCK}', blockId: el.dataset.block, text });
+      });
+    };
+    const blockElement = (id) => (id ? document.querySelector('[data-block="' + CSS.escape(id) + '"]') : null);
+    const newRow = document.querySelector('[data-new]');
+    document.querySelectorAll('.editable').forEach(wire);
+    window.addEventListener('message', (event) => {
+      const message = event.data;
+      if (!message || typeof message !== 'object') return;
+      if (message.type === '${DocumentPanelReplyType.SAVED}') {
+        const el = blockElement(message.blockId);
+        if (el) {
+          el.dataset.original = message.text;
+          el.textContent = message.text;
+          el.removeAttribute('aria-busy');
+        }
+        setStatus('Saved');
+      } else if (message.type === '${DocumentPanelReplyType.APPENDED}' && newRow) {
+        const created = document.createElement('p');
+        created.className = 'editable';
+        created.setAttribute('contenteditable', 'plaintext-only');
+        created.setAttribute('role', 'textbox');
+        created.setAttribute('aria-label', 'Edit text');
+        created.dataset.block = message.blockId;
+        created.dataset.original = message.text;
+        created.textContent = message.text;
+        newRow.before(created);
+        wire(created);
+        newRow.textContent = '';
+        newRow.removeAttribute('aria-busy');
+        setStatus('Saved');
+      } else if (message.type === '${DocumentPanelReplyType.FAILED}') {
+        const el = message.blockId ? blockElement(message.blockId) : newRow;
+        if (el) {
+          el.removeAttribute('aria-busy');
+          if (message.blockId) el.textContent = el.dataset.original || '';
+        }
+        setStatus(message.message || 'Could not save. Your text was not changed.', true);
+      }
+    });`;
+
 function renderShell(input: RenderPageShellInput): string {
+  const editable = input.editable === true;
+  const statusChip = editable ? '<span class="save-status muted" role="status" aria-live="polite"></span><span class="chip">Click text to edit</span>' : '<span class="chip">Read-only</span>';
   const actions = input.showOpen
-    ? `<div class="actions" role="toolbar" aria-label="Page actions"><span class="chip">Read-only</span><button type="button" class="btn ghost" data-message="${DocumentPanelMessageType.COPY_LINK}">Copy link</button><button type="button" class="btn primary" id="open-external">Open in AFFiNE</button></div>`
-    : '<div class="actions"><span class="chip">Read-only</span></div>';
+    ? `<div class="actions" role="toolbar" aria-label="Page actions">${statusChip}<button type="button" class="btn ghost" data-message="${DocumentPanelMessageType.COPY_LINK}">Copy link</button><button type="button" class="btn primary" id="open-external">Open in AFFiNE</button></div>`
+    : `<div class="actions">${statusChip}</div>`;
   const outline = input.outline ?? '';
   const layoutClass = outline.length > 0 ? 'doc-layout' : 'doc-layout no-outline';
   const body = `<header class="topbar"><span class="muted">Preview</span>${actions}</header>
@@ -348,7 +460,7 @@ function renderShell(input: RenderPageShellInput): string {
     cspSource: input.cspSource,
     imageSources: [cspImgSrc(input.serverUrl), 'data:'],
     body,
-    script: SCRIPT,
+    script: editable ? `${SCRIPT}\n${EDIT_SCRIPT}` : SCRIPT,
     extraCss: PAGE_CSS,
   });
 }
@@ -410,9 +522,10 @@ export function renderPageHtml(input: RenderPageHtmlInput): string {
     serverUrl,
     showOpen: true,
     outline: renderOutline(input.page),
+    editable: input.editable === true && !input.page.edgelessOnly,
     body: `<h1>${escapeHtml(title)}</h1>
     ${renderTags(input.tags)}
     ${renderAuthors(input.createdBy, input.updatedBy)}
-    ${renderBody(input.page, mentionPeople, input.url, serverUrl)}`,
+    ${renderBody(input.page, mentionPeople, input.url, serverUrl, input.editable === true)}`,
   });
 }
