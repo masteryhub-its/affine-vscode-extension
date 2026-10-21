@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- A rate-limited request shows the server's answer instead of "This operation was aborted"
+
 ## 1.1.0 — 2026-10-21
 
 Redesigned interface. Everything from 1.0.1 is included.

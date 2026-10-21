@@ -57,9 +57,10 @@ function defaultSleep(ms: number): Promise<void> {
 
 /** A rate-limit answer is final: asking again only makes it worse, so it ends a hedged read at once. */
 class RateLimitedSignal extends Error {
-  public readonly response: Response;
+  /** Already read in full: the attempt that got it is cancelled as soon as the read ends, and a cancelled body cannot be read. */
+  public readonly response: HttpResponse;
 
-  public constructor(response: Response) {
+  public constructor(response: HttpResponse) {
     super('rate limited');
     this.response = response;
   }
@@ -117,7 +118,7 @@ async function attemptRead(request: HttpRequest, cancel: AbortSignal, headersTim
   try {
     const response = await send(request, AbortSignal.any([cancel, guard.signal]));
     if (response.status === 429) {
-      throw new RateLimitedSignal(response);
+      throw new RateLimitedSignal(await readResponse(response));
     }
     return response;
   } catch (error: unknown) {
@@ -135,7 +136,7 @@ async function readHedged(request: HttpRequest, hedgeDelayMs: number, headersTim
     return await readResponse(response);
   } catch (error: unknown) {
     if (error instanceof RateLimitedSignal) {
-      return readResponse(error.response);
+      return error.response;
     }
     if (isTimeoutError(error)) {
       return TIMEOUT_RESPONSE;

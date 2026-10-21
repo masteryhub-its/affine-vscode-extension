@@ -169,6 +169,10 @@ interface FetchInitWithSignal {
   readonly signal?: AbortSignal;
 }
 
+interface AbortableInit {
+  readonly signal?: AbortSignal;
+}
+
 describe('hedged reads', () => {
   const originalFetch = globalThis.fetch;
   afterEach(() => {
@@ -238,6 +242,33 @@ describe('hedged reads', () => {
     const response = await createFetchHttpClient({ sleep: () => Promise.resolve(), hedgeDelayMs: 10 })(post);
     expect(response.status).toBe(200);
     expect(calls).toBe(1);
+  });
+
+  it('still reads the body of a rate-limit answer after the other attempts are cancelled', async () => {
+    globalThis.fetch = ((_url: string, init?: AbortableInit) => {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          const fail = (): void => controller.error(new DOMException('This operation was aborted', 'AbortError'));
+          if (init?.signal?.aborted === true) {
+            fail();
+            return;
+          }
+          init?.signal?.addEventListener('abort', fail, { once: true });
+          setTimeout(() => {
+            try {
+              controller.enqueue(new TextEncoder().encode('slow down'));
+              controller.close();
+            } catch {
+              // already cancelled
+            }
+          }, 30);
+        },
+      });
+      return Promise.resolve(new Response(stream, { status: 429, headers: { 'retry-after': '3' } }));
+    }) as typeof fetch;
+    const response = await createFetchHttpClient({ sleep: () => Promise.resolve(), hedgeDelayMs: 10 })(get);
+    expect(response.status).toBe(429);
+    expect(response.body).toBe('slow down');
   });
 
   it('returns a rate-limit answer as it is instead of asking again', async () => {
