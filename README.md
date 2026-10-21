@@ -4,7 +4,7 @@
 [![CI](https://github.com/masteryhub-its/affine-vscode-extension/actions/workflows/ci.yml/badge.svg)](https://github.com/masteryhub-its/affine-vscode-extension/actions/workflows/ci.yml)
 [![GitHub stars](https://img.shields.io/github/stars/masteryhub-its/affine-vscode-extension?style=social)](https://github.com/masteryhub-its/affine-vscode-extension/stargazers)
 
-Browse, preview, search, and organize pages from **self-hosted AFFiNE** or **AFFiNE Cloud** without leaving VS Code or Cursor.
+Browse, preview, search, edit, and organize pages from **self-hosted AFFiNE** or **AFFiNE Cloud** without leaving VS Code or Cursor.
 
 This is an open-source **[MasteryHub ITS](https://www.masteryhub-its.com)** client. It is **not** an official [Toeverything](https://github.com/toeverything/AFFiNE) product. There is no official AFFiNE editor extension; this one talks to your server over GraphQL and Yjs.
 
@@ -63,6 +63,7 @@ Full catalog (including preview coverage and non-goals): **[FEATURES.md](./FEATU
 - **Search** pages (command palette, sidebar Search, or the Pages toolbar) — titles always; full text when the server indexer is on
 - Sync / refresh the catalog from the server
 - Page actions (move, trash with spinner, open in browser) appear on hover so titles stay readable
+- The pages tree is saved and shown at once on the next start, then refreshed in the background; requests run in parallel and slow reads race a second attempt
 - **Force reload** AFFiNE (sidebar, pages, and previews) without restarting the editor
 - Signed-in name, email, avatar, server URL, and last-synced time
 - **Favorites**, **collections** (titles), **recent pages** (last 8), and tags when the workspace has them
@@ -70,11 +71,18 @@ Full catalog (including preview coverage and non-goals): **[FEATURES.md](./FEATU
 ### Command palette
 
 - Sign in, Search AFFiNE Pages, Open AFFiNE Document, Open AFFiNE Link, New Page, New Folder, Restore from trash, Sync, Force Reload, Sign out
+- **Send Selection to AFFiNE Page** (editor right-click): puts the selected code, with its file and lines, on a new page or at the end of an existing one
+- **Open Page as Markdown** (page right-click, or the Markdown button in the preview)
 - Move, trash, rename, and duplicate stay on the tree / sidebar (not in the palette)
 
 ### Local preview
 
-Click a page (or a search / Open Document hit) to open a preview in the editor, where you can edit plain text blocks and add paragraphs in place (from Yjs — works when the server indexer is off):
+Click a page (or a search / Open Document hit) to open a preview in the editor (from Yjs — works when the server indexer is off). Click text to edit it where it is:
+
+- **Edit in place:** paragraphs, headings, quotes, list items, code blocks and table cells. Formatting and links on text you leave alone are kept; only the characters you change are sent. Blocks with @mentions or linked pages stay read-only
+- **Write new blocks** on the empty line at the end of a page with the usual shortcuts: `#` headings, `-` bullets, `1.` numbers, `[]` to-dos, `>` quotes, `---` dividers, a fence for code, and `**bold**`, `*italic*`, `~~strike~~`, `` `code` ``, `[text](url)`
+- **Open as Markdown** shows the page as Markdown text in an editor tab
+
 
 - Title, tags, creator, and last editor (deduped when they are the same person), with avatars
 - Headings 1–6, paragraphs, quotes, bullets, numbered lists, and to-do checkboxes
@@ -102,6 +110,8 @@ Databases, column layouts, embeds, and whiteboard drawing are not drawn in previ
 
 - Access tokens in editor Secret Storage — never in `settings.json`
 - Password is not persisted after sign-in
+- People's pictures are fetched with your session and embedded in the page, so the page never loads images from the server on its own
+- The saved pages tree is kept per server and account, and is cleared when you sign out or change server
 - Optional default workspace (`affine.defaultWorkspaceId`); empty means every workspace you can access
 - `affine.clientVersion` defaults to `0.26.0` so the server accepts sync sessions
 - `affine.openMode` is always the system browser (Simple Browser has no AFFiNE session)

@@ -2,7 +2,7 @@
 
 Complete list of what **AFFiNE by MasteryHub** (v1.0.1) does in VS Code and Cursor. The [README](./README.md) is the short version. This file is the catalog.
 
-This client talks to **self-hosted AFFiNE** or **AFFiNE Cloud** over GraphQL, REST, and Yjs. It is **not** an official Toeverything product. Editing still happens in the AFFiNE web app; this extension is the bridge next to your code.
+This client talks to **self-hosted AFFiNE** or **AFFiNE Cloud** over GraphQL, REST, and Yjs. It is **not** an official Toeverything product. Text editing works in place for common blocks; anything structural still happens in the AFFiNE web app. This extension is the bridge next to your code.
 
 ## Connect and account
 
@@ -78,6 +78,8 @@ Visible commands:
 | New AFFiNE Page | Workspace, folder, title → create via Yjs |
 | New AFFiNE Folder | Create an Organize folder |
 | Restore AFFiNE Page | Pick a trashed page and restore it |
+| Send Selection to AFFiNE Page | Editor right-click: selected code, with its file and lines, to a new page or the end of an existing one |
+| Open Page as Markdown | Page right-click, or the Markdown button in the preview: the page as Markdown text in an editor tab |
 | Sync AFFiNE | Reload workspaces and pages from the server |
 | Force Reload AFFiNE | Rebuild AFFiNE UI, catalog, and previews. Does **not** reload the editor window |
 | Sign out of AFFiNE | Clears the stored credential |
@@ -90,11 +92,13 @@ Click a page (or open it from Search / Open Document) for a preview built from t
 
 ### Editing in place
 
-- Click any plain paragraph, heading, quote or list item to edit it where it is. Press **Enter** or click away to save, **Escape** to cancel
-- Click the empty line at the bottom to write a new paragraph
+- Click any paragraph, heading, quote, list item, code block or table cell to edit it where it is. Press **Enter** or click away to save, **Escape** to cancel. In a code block **Enter** adds a line and **Ctrl or Cmd+Enter** saves; **Tab** moves between table cells
+- Text with bold, italic, links, colours or highlights is editable too; formatting on the text you leave alone is kept, and text you type inside it takes the same formatting
+- A plain click in linked text places the cursor; **Ctrl or Cmd+click** opens the link
+- A block with an @mention or a linked page is not editable here, because the name shown is not the text stored; edit it in AFFiNE
+- Click the empty line at the bottom to write new blocks: `#` to `######` headings, `-` or `*` bullets, `1.` numbers, `[]` / `[x]` to-dos, `>` quotes, `---` dividers, a fence (three backticks and a language) for code. `**bold**`, `*italic*`, `~~strike~~`, `` `code` `` and `[text](url)` (web and mail links only) are turned into formatting
 - Only the characters you change are sent, so edits made in AFFiNE at the same time are kept
-- A block with bold, italic, a link, a mention or colour is not editable here, so formatting is never flattened; the page says to edit it in AFFiNE
-- Not supported here: formatting, slash commands, moving or deleting blocks, tables, code and whiteboards
+- Not supported here: slash menu, moving or deleting blocks, new tables, callouts, databases and whiteboards
 - A save that fails puts your previous text back and shows the reason in the top bar
 
 **Chrome**
@@ -189,7 +193,7 @@ Install from the [Visual Studio Marketplace](https://marketplace.visualstudio.co
 
 These are out of scope, not missing by accident:
 
-- Editing page bodies inside VS Code / Markdown write-back (pages are Yjs CRDTs)
+- Markdown write-back to a page (pages are Yjs CRDTs; Markdown export is one way)
 - Whiteboard / edgeless editor inside the sidebar
 - Embedding the AFFiNE web app in an iframe or Simple Browser
 - Official AFFiNE MCP (needs Copilot on the server)
