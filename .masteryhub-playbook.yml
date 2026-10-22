@@ -1,0 +1,5 @@
+product: masteryhub-its
+productVersion: "1.0"
+catalogVersion: "0.1.0"
+standardsProfile: pre-catalog-production
+# No catalog buildingType for a VS Code extension. Do not invent a buildingType here.
